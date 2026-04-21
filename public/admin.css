@@ -33,33 +33,32 @@ a:hover { color: var(--rsm-mintcake-hover); }
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--rsm-granite);
-  color: var(--rsm-cloudy);
-  padding: 16px 28px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  background: var(--rsm-cloudy);
+  color: var(--rsm-granite);
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--rsm-border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .rsm-brand { display: flex; gap: 16px; align-items: center; }
 .rsm-brand-logo {
   display: block;
-  height: 42px;
+  height: 44px;
   width: auto;
-  /* The source logo is dark on a transparent background; the header is
-     dark, so invert the colours to render the mark in cloudy/white. */
-  filter: brightness(0) invert(1);
 }
 .rsm-brand-divider {
   width: 1px;
-  height: 30px;
-  background: var(--rsm-mintcake);
-  opacity: 0.5;
+  height: 34px;
+  background: var(--rsm-border);
 }
 .rsm-brand-text { display: flex; flex-direction: column; }
-.rsm-brand-title { font-weight: 700; font-size: 1.1rem; line-height: 1.2; }
-.rsm-brand-subtitle { font-size: 0.82rem; color: var(--rsm-mintcake); letter-spacing: 0.04em; }
+.rsm-brand-title { font-weight: 700; font-size: 1.1rem; line-height: 1.2; color: var(--rsm-granite); }
+.rsm-brand-subtitle { font-size: 0.82rem; color: var(--rsm-muted); letter-spacing: 0.04em; }
 .rsm-nav { display: flex; gap: 18px; align-items: center; font-size: 0.95rem; }
-.rsm-nav a { color: var(--rsm-cloudy); text-decoration: none; }
-.rsm-nav a:hover { color: var(--rsm-sunrise); }
-.rsm-session { color: var(--rsm-mintcake); font-size: 0.9rem; }
+.rsm-nav a { color: var(--rsm-granite); text-decoration: none; font-weight: 600; }
+.rsm-nav a:hover { color: var(--rsm-mintcake-hover); }
+.rsm-session { color: var(--rsm-muted); font-size: 0.9rem; }
+.rsm-session strong { color: var(--rsm-granite); }
+.rsm-session a { color: var(--rsm-muted); text-decoration: underline; font-weight: 400; }
 
 .rsm-main {
   max-width: 1200px;
