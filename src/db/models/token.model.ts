@@ -14,7 +14,7 @@ export interface TokenAttrs {
 
 const tokenSchema = new Schema<TokenAttrs>(
   {
-    tokenHash: { type: String, required: true, unique: true },
+    tokenHash: { type: String, required: true },
     tokenPrefix: { type: String, required: true },
     tenantCode: { type: String, required: true },
     ownerOperator: { type: String, required: true, lowercase: true, trim: true },

@@ -12,7 +12,7 @@ export interface OperatorAttrs {
 
 const operatorSchema = new Schema<OperatorAttrs>(
   {
-    username: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    username: { type: String, required: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
     isRoot: { type: Boolean, required: true, default: false },
     label: { type: String, required: false },

@@ -4,13 +4,14 @@
  * this module builds the Paths / Security / Servers envelope around it.
  */
 import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { loadConfig } from "../config.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const schemaPath = path.resolve(__dirname, "..", "..", "schema", "salesforce-api.schema.json");
+// esbuild bundles all source into a single dist/server.js so relative paths
+// from `__dirname` don't match between dev (src/api/) and prod (dist/).
+// Resolve from process.cwd() instead — the server is launched with the
+// project root as cwd in both environments.
+const schemaPath = path.resolve(process.cwd(), "schema", "salesforce-api.schema.json");
 
 interface SchemaFile {
   title?: string;
