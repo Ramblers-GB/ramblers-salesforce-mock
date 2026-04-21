@@ -390,8 +390,12 @@ export function createAdminRouter(): Router {
     }),
   );
 
-  // Centralised error handler for assertOwnsTenant throws.
-  router.use((err: unknown, _req: Request, res: Response, next: (e?: unknown) => void) => {
+  // Centralised error handler. Covers:
+  //  - assertOwnsTenant-style throws with {status, message}
+  //  - unexpected errors (Mongo conflicts, etc.): respond with JSON 500 so the
+  //    client always has a machine-readable body instead of Express's default
+  //    HTML 500 page.
+  router.use((err: unknown, _req: Request, res: Response, _next: (e?: unknown) => void) => {
     if (err && typeof err === "object" && "status" in err) {
       const status = (err as { status: number }).status;
       const message = (err as { message?: string }).message ?? "Error";
@@ -404,8 +408,14 @@ export function createAdminRouter(): Router {
         return;
       }
     }
+    const message = err instanceof Error ? err.message : String(err);
     logger.error({ err }, "admin route error");
-    next(err);
+    res.status(500).json({
+      error: {
+        code: "INTERNAL_ERROR",
+        message: message || "Internal server error",
+      },
+    });
   });
 
   return router;

@@ -86,7 +86,13 @@
           <label>Label <input name="label" placeholder="MailMan - NS03 dev" required /></label>
           <button type="submit" class="rsm-btn rsm-btn-primary">Generate token</button>
         </form>
-        <pre class="rsm-token-reveal" data-rsm-token-reveal hidden></pre>
+        <div class="rsm-token-reveal" data-rsm-token-reveal hidden>
+          <p class="rsm-token-reveal-warning" data-rsm-token-reveal-warning></p>
+          <div class="rsm-token-reveal-row">
+            <code class="rsm-token-reveal-value" data-rsm-token-reveal-value></code>
+            <button type="button" class="rsm-btn rsm-btn-small rsm-btn-copy" data-rsm-token-copy>Copy</button>
+          </div>
+        </div>
         <table class="rsm-table" data-rsm-token-table>
           <thead><tr><th>Prefix</th><th>Label</th><th>Created</th><th>Last used</th><th></th></tr></thead>
           <tbody></tbody>
@@ -106,13 +112,14 @@
         </form>
 
         <form class="rsm-form rsm-inline" data-rsm-form="generate">
-          <label>Generate <input type="number" name="count" min="1" max="50000" value="250" required /> rows</label>
-          <label>Seed <input type="number" name="seed" placeholder="optional" /></label>
+          <label>Row count <input type="number" name="count" min="1" max="50000" value="250" required /></label>
+          <label>Seed (optional) <input type="number" name="seed" placeholder="for reproducibility" /></label>
           <button type="submit" class="rsm-btn rsm-btn-primary">Generate &amp; ingest</button>
           <button type="submit" class="rsm-btn rsm-btn-ghost" data-rsm-btn="download-only" formnovalidate>Download only</button>
         </form>
 
         <pre class="rsm-ingest-result" data-rsm-ingest-result hidden></pre>
+        <pre class="rsm-ingest-error" data-rsm-ingest-error hidden></pre>
       </article>
 
       <article class="rsm-panel">

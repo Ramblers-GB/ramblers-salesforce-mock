@@ -36,16 +36,18 @@ export async function upsertMembers(
 
   for (const m of parsed) {
     const { salesforceId } = m;
-    const fullDoc = {
+    // `ingestedAt` goes in $setOnInsert only so the first-seen timestamp is
+    // preserved across re-ingests. Every other field is in $set. Having any
+    // field in both operators is a MongoDB conflict and throws.
+    const setDoc = {
       ...m,
       tenantCode: tenantCode.toUpperCase(),
-      ingestedAt: now,
       updatedAt: now,
       removed: false,
     };
     const res = await Member.updateOne(
       { tenantCode: tenantCode.toUpperCase(), salesforceId },
-      { $set: fullDoc, $setOnInsert: { ingestedAt: now } },
+      { $set: setDoc, $setOnInsert: { ingestedAt: now } },
       { upsert: true },
     );
     if (res.upsertedCount > 0) upserted += 1;

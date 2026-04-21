@@ -60,16 +60,31 @@ async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   if (!response.ok) {
-    let message = `${response.status} ${response.statusText}`;
-    try {
-      const body = (await response.json()) as ApiError;
-      if (body.error?.message) message = body.error.message;
-    } catch {
-      /* non-JSON error body */
-    }
-    throw new Error(message);
+    throw new Error(await extractErrorMessage(response));
   }
   return (await response.json()) as T;
+}
+
+async function extractErrorMessage(response: Response): Promise<string> {
+  const statusText = response.statusText || "";
+  const prefix = statusText ? `${response.status} ${statusText}` : String(response.status);
+  try {
+    const text = await response.text();
+    if (!text) return prefix;
+    try {
+      const parsed = JSON.parse(text) as ApiError | Record<string, unknown>;
+      if (typeof parsed === "object" && parsed !== null && "error" in parsed) {
+        const err = (parsed as ApiError).error;
+        if (err?.message) return `${prefix} — ${err.message}`;
+      }
+    } catch {
+      /* not JSON; fall through and return the raw body */
+    }
+    const trimmed = text.trim().slice(0, 500);
+    return trimmed ? `${prefix} — ${trimmed}` : prefix;
+  } catch {
+    return prefix;
+  }
 }
 
 function $<T extends HTMLElement>(selector: string, root: ParentNode = document): T | null {
@@ -256,6 +271,7 @@ class AdminApp {
     this.bindDetailForms(tenant);
     $<HTMLElement>("[data-rsm-token-reveal]")!.hidden = true;
     $<HTMLElement>("[data-rsm-ingest-result]")!.hidden = true;
+    $<HTMLElement>("[data-rsm-ingest-error]")!.hidden = true;
 
     await Promise.all([this.refreshTokens(tenant), this.refreshMembers(tenant)]);
   }
@@ -334,16 +350,42 @@ class AdminApp {
         `/admin/api/tenants/${encodeURIComponent(tenant.code)}/tokens`,
         { method: "POST", body: JSON.stringify({ label }) },
       );
-      const reveal = $<HTMLPreElement>("[data-rsm-token-reveal]");
-      if (reveal) {
-        reveal.textContent = `${body.warning}\n\n${body.token}`;
+      const reveal = $<HTMLElement>("[data-rsm-token-reveal]");
+      const warningEl = $<HTMLElement>("[data-rsm-token-reveal-warning]");
+      const valueEl = $<HTMLElement>("[data-rsm-token-reveal-value]");
+      const copyBtn = $<HTMLButtonElement>("[data-rsm-token-copy]");
+      if (reveal && warningEl && valueEl && copyBtn) {
+        warningEl.textContent = body.warning;
+        valueEl.textContent = body.token;
         reveal.hidden = false;
+        copyBtn.textContent = "Copy";
+        copyBtn.classList.remove("rsm-btn-copied");
+        copyBtn.onclick = (): void => {
+          void this.copyToClipboard(body.token, copyBtn);
+        };
       }
       const generateForm = $<HTMLFormElement>('[data-rsm-form="generate-token"]');
       generateForm?.reset();
       await this.refreshTokens(tenant);
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  private async copyToClipboard(text: string, button: HTMLButtonElement): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(text);
+      button.textContent = "Copied";
+      button.classList.add("rsm-btn-copied");
+      setTimeout(() => {
+        button.textContent = "Copy";
+        button.classList.remove("rsm-btn-copied");
+      }, 2000);
+    } catch {
+      button.textContent = "Copy failed";
+      setTimeout(() => {
+        button.textContent = "Copy";
+      }, 2000);
     }
   }
 
@@ -357,11 +399,8 @@ class AdminApp {
   }
 
   private async uploadXlsx(tenant: TenantView, file: File): Promise<void> {
-    const resultEl = $<HTMLPreElement>("[data-rsm-ingest-result]");
-    if (resultEl) {
-      resultEl.hidden = false;
-      resultEl.textContent = "Uploading…";
-    }
+    this.clearIngestFeedback();
+    this.setIngestProgress("Uploading…");
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -370,14 +409,16 @@ class AdminApp {
         { method: "POST", body: formData, credentials: "same-origin" },
       );
       if (!response.ok) {
-        throw new Error(`${response.status} ${response.statusText}`);
+        const message = await extractErrorMessage(response);
+        this.setIngestError(message);
+        return;
       }
       const body = (await response.json()) as Record<string, unknown>;
-      if (resultEl) resultEl.textContent = JSON.stringify(body, null, 2);
+      this.setIngestResult(JSON.stringify(body, null, 2));
       await this.refreshTenants();
       await this.refreshMembers(tenant);
     } catch (err: unknown) {
-      if (resultEl) resultEl.textContent = "Error: " + (err instanceof Error ? err.message : String(err));
+      this.setIngestError(err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -387,7 +428,7 @@ class AdminApp {
     seed: number | undefined,
     downloadOnly: boolean,
   ): Promise<void> {
-    const resultEl = $<HTMLPreElement>("[data-rsm-ingest-result]");
+    this.clearIngestFeedback();
 
     if (downloadOnly) {
       const url = `/admin/api/tenants/${encodeURIComponent(tenant.code)}/generate`;
@@ -398,10 +439,8 @@ class AdminApp {
         body: JSON.stringify({ count, seed, downloadOnly: true }),
       });
       if (!response.ok) {
-        if (resultEl) {
-          resultEl.hidden = false;
-          resultEl.textContent = `Error: ${response.status} ${response.statusText}`;
-        }
+        const message = await extractErrorMessage(response);
+        this.setIngestError(message);
         return;
       }
       const blob = await response.blob();
@@ -415,20 +454,52 @@ class AdminApp {
       return;
     }
 
-    if (resultEl) {
-      resultEl.hidden = false;
-      resultEl.textContent = "Generating…";
-    }
+    this.setIngestProgress("Generating…");
     try {
       const body = await jsonFetch<Record<string, unknown>>(
         `/admin/api/tenants/${encodeURIComponent(tenant.code)}/generate`,
         { method: "POST", body: JSON.stringify({ count, seed }) },
       );
-      if (resultEl) resultEl.textContent = JSON.stringify(body, null, 2);
+      this.setIngestResult(JSON.stringify(body, null, 2));
       await this.refreshTenants();
       await this.refreshMembers(tenant);
     } catch (err: unknown) {
-      if (resultEl) resultEl.textContent = "Error: " + (err instanceof Error ? err.message : String(err));
+      this.setIngestError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  private clearIngestFeedback(): void {
+    const resultEl = $<HTMLElement>("[data-rsm-ingest-result]");
+    const errorEl = $<HTMLElement>("[data-rsm-ingest-error]");
+    if (resultEl) { resultEl.hidden = true; resultEl.textContent = ""; }
+    if (errorEl) { errorEl.hidden = true; errorEl.textContent = ""; }
+  }
+
+  private setIngestProgress(message: string): void {
+    const resultEl = $<HTMLElement>("[data-rsm-ingest-result]");
+    if (resultEl) {
+      resultEl.hidden = false;
+      resultEl.textContent = message;
+    }
+  }
+
+  private setIngestResult(text: string): void {
+    const resultEl = $<HTMLElement>("[data-rsm-ingest-result]");
+    const errorEl = $<HTMLElement>("[data-rsm-ingest-error]");
+    if (errorEl) errorEl.hidden = true;
+    if (resultEl) {
+      resultEl.hidden = false;
+      resultEl.textContent = text;
+    }
+  }
+
+  private setIngestError(message: string): void {
+    const resultEl = $<HTMLElement>("[data-rsm-ingest-result]");
+    const errorEl = $<HTMLElement>("[data-rsm-ingest-error]");
+    if (resultEl) resultEl.hidden = true;
+    if (errorEl) {
+      errorEl.hidden = false;
+      errorEl.textContent = message;
     }
   }
 
