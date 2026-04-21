@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://salesforce-mock.ngx-ramblers.org.uk/schema/salesforce-api.schema.json",
-  "title": "Ramblers Salesforce API (day-one, nbarrett/ngx-ramblers#209)",
-  "description": "Consolidated JSON Schema for the data types defined in ngx-ramblers issue #209. Source of truth is the issue body; this file is kept in sync by scripts/check-schema-drift.ts.",
+  "title": "Ramblers Salesforce API (day-one contract)",
+  "description": "Consolidated JSON Schema for the data types defined in the day-one Ramblers Salesforce API contract. Source of truth is the GitHub issue body; this file is kept in sync by scripts/check-schema-drift.ts.",
   "source": "https://github.com/nbarrett/ngx-ramblers/issues/209",
   "$defs": {
     "SalesforceMember": {

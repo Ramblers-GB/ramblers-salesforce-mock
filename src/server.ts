@@ -59,7 +59,8 @@ export async function createApp(): Promise<express.Express> {
     res.json(openapi);
   });
   app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapi, {
-    customSiteTitle: "Ramblers Salesforce API (mock)",
+    customSiteTitle: "Ramblers Salesforce API - Mock Server",
+    customfavIcon: "/brand/favicon.ico",
     swaggerOptions: {
       persistAuthorization: true,
     },

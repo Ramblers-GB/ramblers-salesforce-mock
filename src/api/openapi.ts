@@ -53,13 +53,17 @@ export async function getOpenApiDocument(): Promise<Record<string, unknown>> {
   const document: Record<string, unknown> = {
     openapi: "3.0.3",
     info: {
-      title: parsed.title ?? "Ramblers Salesforce API (mock)",
+      title: "Ramblers Salesforce API — Mock Server",
       description:
-        parsed.description ??
-        "Reference mock server for nbarrett/ngx-ramblers#209. Contract is kept in sync with the issue body via CI drift check.",
+        "Reference mock server for the day-one Ramblers Salesforce API contract. " +
+        "A shared development fixture for the NGX Ramblers platform, Charlie Bigley's MailMan, " +
+        "and Ramblers HQ's own Salesforce build team. " +
+        "Contract tracked at https://github.com/nbarrett/ngx-ramblers/issues/209 " +
+        "and kept in sync via CI drift check. " +
+        "This server is not NGX Ramblers, not MailMan, and not Ramblers HQ — it exists only to give all three a conformant endpoint to code against.",
       version: "0.1.0",
       contact: {
-        name: "NGX Ramblers",
+        name: "Ramblers Salesforce Mock",
         url: "https://github.com/nbarrett/ramblers-salesforce-mock",
       },
     },
