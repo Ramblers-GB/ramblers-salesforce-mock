@@ -38,10 +38,24 @@ a:hover { color: var(--rsm-mintcake-hover); }
   padding: 16px 28px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
-.rsm-brand { display: flex; gap: 12px; align-items: center; }
-.rsm-brand img { display: block; }
-.rsm-brand-title { font-weight: 700; font-size: 1.15rem; line-height: 1.2; }
-.rsm-brand-subtitle { font-size: 0.85rem; color: var(--rsm-mintcake); letter-spacing: 0.04em; }
+.rsm-brand { display: flex; gap: 16px; align-items: center; }
+.rsm-brand-logo {
+  display: block;
+  height: 42px;
+  width: auto;
+  /* The source logo is dark on a transparent background; the header is
+     dark, so invert the colours to render the mark in cloudy/white. */
+  filter: brightness(0) invert(1);
+}
+.rsm-brand-divider {
+  width: 1px;
+  height: 30px;
+  background: var(--rsm-mintcake);
+  opacity: 0.5;
+}
+.rsm-brand-text { display: flex; flex-direction: column; }
+.rsm-brand-title { font-weight: 700; font-size: 1.1rem; line-height: 1.2; }
+.rsm-brand-subtitle { font-size: 0.82rem; color: var(--rsm-mintcake); letter-spacing: 0.04em; }
 .rsm-nav { display: flex; gap: 18px; align-items: center; font-size: 0.95rem; }
 .rsm-nav a { color: var(--rsm-cloudy); text-decoration: none; }
 .rsm-nav a:hover { color: var(--rsm-sunrise); }
