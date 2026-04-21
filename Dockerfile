@@ -6,7 +6,8 @@ COPY tsconfig.json eslint.config.mjs ./
 COPY src ./src
 COPY scripts ./scripts
 COPY schema ./schema
-COPY public ./public
+# `public/` is created by `npm run build:client` (esbuild writes to public/admin.js).
+# The runtime stage picks up the populated directory via `COPY --from=build`.
 RUN npm run build
 
 FROM node:20-alpine AS runtime
