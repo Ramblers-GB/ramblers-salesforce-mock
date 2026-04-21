@@ -10,7 +10,7 @@ import { attachOperator, requireOperator, requireRoot } from "./session.js";
 import { hashPassword, verifyPassword, timingSafeEqual } from "./passwords.js";
 import { loadConfig } from "../config.js";
 import { logger } from "../logger.js";
-import { mintToken } from "../auth/tokens.js";
+import { generateToken } from "../auth/tokens.js";
 import { parseExportAll, writeExportAll } from "../ingest/xlsxParser.js";
 import { generateSyntheticMembers } from "../ingest/synthetic.js";
 import { upsertMembers } from "../ingest/upsert.js";
@@ -235,18 +235,18 @@ export function createAdminRouter(): Router {
         res.status(400).json({ error: { code: "BAD_REQUEST", message: parsed.error.message } });
         return;
       }
-      const minted = mintToken(tenant.code);
+      const generated = generateToken(tenant.code);
       await ApiToken.create({
-        tokenHash: minted.hash,
-        tokenPrefix: minted.prefix,
+        tokenHash: generated.hash,
+        tokenPrefix: generated.prefix,
         tenantCode: tenant.code,
         ownerOperator: req.operator!.username,
         label: parsed.data.label,
         createdAt: new Date(),
       });
       res.status(201).json({
-        token: minted.plaintext,
-        prefix: minted.prefix,
+        token: generated.plaintext,
+        prefix: generated.prefix,
         tenantCode: tenant.code,
         warning: "This is the only time the token will be shown. Copy it now.",
       });

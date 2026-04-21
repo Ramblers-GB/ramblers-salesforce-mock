@@ -34,7 +34,7 @@ interface TokenView {
   revokedAt?: string;
 }
 
-interface MintedToken {
+interface GeneratedToken {
   token: string;
   prefix: string;
   tenantCode: string;
@@ -261,12 +261,12 @@ class AdminApp {
   }
 
   private bindDetailForms(tenant: TenantView): void {
-    const mintForm = $<HTMLFormElement>('[data-rsm-form="mint-token"]');
-    if (mintForm) {
-      mintForm.onsubmit = (e): void => {
+    const generateForm = $<HTMLFormElement>('[data-rsm-form="generate-token"]');
+    if (generateForm) {
+      generateForm.onsubmit = (e): void => {
         e.preventDefault();
-        const label = (mintForm.elements.namedItem("label") as HTMLInputElement).value;
-        void this.mintToken(tenant, label);
+        const label = (generateForm.elements.namedItem("label") as HTMLInputElement).value;
+        void this.generateTokenFor(tenant, label);
       };
     }
 
@@ -328,9 +328,9 @@ class AdminApp {
     }
   }
 
-  private async mintToken(tenant: TenantView, label: string): Promise<void> {
+  private async generateTokenFor(tenant: TenantView, label: string): Promise<void> {
     try {
-      const body = await jsonFetch<MintedToken>(
+      const body = await jsonFetch<GeneratedToken>(
         `/admin/api/tenants/${encodeURIComponent(tenant.code)}/tokens`,
         { method: "POST", body: JSON.stringify({ label }) },
       );
@@ -339,8 +339,8 @@ class AdminApp {
         reveal.textContent = `${body.warning}\n\n${body.token}`;
         reveal.hidden = false;
       }
-      const mintForm = $<HTMLFormElement>('[data-rsm-form="mint-token"]');
-      mintForm?.reset();
+      const generateForm = $<HTMLFormElement>('[data-rsm-form="generate-token"]');
+      generateForm?.reset();
       await this.refreshTokens(tenant);
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : String(err));

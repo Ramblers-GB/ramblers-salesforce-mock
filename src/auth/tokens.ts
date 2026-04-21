@@ -1,8 +1,8 @@
 /**
- * API token minting and verification.
+ * API token generation and verification.
  *
  * Token format: `rsm_<tenantCode>_<32-hex-random>`.
- * The full plaintext is only returned to the minting operator ONCE (at creation).
+ * The full plaintext is only returned to the generating operator ONCE (at creation).
  * We persist a SHA-256 hash plus a non-secret prefix (first 12 chars) so operators
  * can recognise tokens in the admin UI without exposing the secret.
  */
@@ -16,7 +16,7 @@ export interface NewToken {
 
 const TOKEN_PREFIX = "rsm";
 
-export function mintToken(tenantCode: string): NewToken {
+export function generateToken(tenantCode: string): NewToken {
   const random = randomBytes(24).toString("hex");
   const plaintext = `${TOKEN_PREFIX}_${tenantCode}_${random}`;
   const hash = hashToken(plaintext);

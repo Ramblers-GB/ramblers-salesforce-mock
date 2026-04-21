@@ -145,7 +145,7 @@ export type ApiErrorCode =
 /** Internal: a tenant is a `groupCode` (4 chars) or `areaCode` (2+ chars). */
 export type TenantCode = string;
 
-/** Internal: operator accounts own tenants and mint tokens for them. */
+/** Internal: operator accounts own tenants and generate tokens for them. */
 export interface OperatorRef {
   username: string;
 }
