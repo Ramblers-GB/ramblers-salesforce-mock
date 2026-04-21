@@ -51,6 +51,40 @@
   </section>
 
   <section class="rsm-view" data-rsm-view="dashboard" hidden>
+
+    <section class="rsm-operators-panel" data-rsm-operators-panel hidden>
+      <header class="rsm-operators-head">
+        <h2>Operators <span class="rsm-chip">root only</span></h2>
+        <button class="rsm-btn rsm-btn-small" data-rsm-btn="toggle-operators">Show</button>
+      </header>
+      <div class="rsm-operators-body" data-rsm-operators-body hidden>
+        <p class="rsm-muted">Each operator signs in with their own username and password and owns only the tenants they create.</p>
+        <form class="rsm-form rsm-inline" data-rsm-form="new-operator">
+          <label>Username <input name="username" required minlength="3" maxlength="40" placeholder="charlie.bigley" /></label>
+          <label>Password
+            <span class="rsm-input-with-action">
+              <input name="password" type="text" required minlength="12" maxlength="100" placeholder="12+ chars" />
+              <button type="button" class="rsm-btn rsm-btn-ghost rsm-btn-small" data-rsm-btn="generate-password" title="Fill a strong random password">Generate</button>
+            </span>
+          </label>
+          <label>Label <input name="label" placeholder="Charlie Bigley / MailMan" maxlength="120" /></label>
+          <button type="submit" class="rsm-btn rsm-btn-primary">Create operator</button>
+        </form>
+        <div class="rsm-token-reveal" data-rsm-operator-reveal hidden>
+          <p class="rsm-token-reveal-warning" data-rsm-operator-reveal-warning></p>
+          <div class="rsm-token-reveal-row">
+            <code class="rsm-token-reveal-value" data-rsm-operator-reveal-value></code>
+            <button type="button" class="rsm-btn rsm-btn-small rsm-btn-copy" data-rsm-operator-copy>Copy</button>
+          </div>
+        </div>
+        <pre class="rsm-ingest-error" data-rsm-operator-error hidden></pre>
+        <table class="rsm-table" data-rsm-operators-table>
+          <thead><tr><th>Username</th><th>Label</th><th>Role</th><th>Created</th><th>Last login</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
     <aside class="rsm-sidebar">
       <div class="rsm-sidebar-head">
         <h2>Tenants</h2>

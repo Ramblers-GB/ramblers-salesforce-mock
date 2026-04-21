@@ -176,7 +176,7 @@ class AdminApp {
     showView("dashboard");
     const sess = $<HTMLElement>("[data-rsm-session]");
     if (sess && this.operator) {
-      sess.innerHTML = `Signed in as <strong>${this.operator.username}</strong>${this.operator.isRoot ? " (root)" : ""} · <a href="#" data-rsm-signout>sign out</a>`;
+      sess.innerHTML = `Signed in as <strong>${escapeHtml(this.operator.username)}</strong>${this.operator.isRoot ? " (root)" : ""} · <a href="#" data-rsm-signout>sign out</a>`;
       const signOut = $<HTMLAnchorElement>("[data-rsm-signout]", sess);
       signOut?.addEventListener("click", (e) => {
         e.preventDefault();
@@ -184,7 +184,107 @@ class AdminApp {
       });
     }
     this.bindDashboardUI();
+    if (this.operator?.isRoot) {
+      this.bindOperatorsUI();
+      const panel = $<HTMLElement>("[data-rsm-operators-panel]");
+      if (panel) panel.hidden = false;
+    }
     await this.refreshTenants();
+  }
+
+  private bindOperatorsUI(): void {
+    const toggle = $<HTMLButtonElement>('[data-rsm-btn="toggle-operators"]');
+    const body = $<HTMLElement>("[data-rsm-operators-body]");
+    toggle?.addEventListener("click", () => {
+      if (!body) return;
+      const isHidden = body.hidden;
+      body.hidden = !isHidden;
+      toggle.textContent = isHidden ? "Hide" : "Show";
+      if (isHidden) void this.refreshOperators();
+    });
+
+    $<HTMLButtonElement>('[data-rsm-btn="generate-password"]')?.addEventListener("click", () => {
+      const input = $<HTMLInputElement>('[data-rsm-form="new-operator"] input[name="password"]');
+      if (input) input.value = randomPassword(20);
+    });
+
+    const form = $<HTMLFormElement>('[data-rsm-form="new-operator"]');
+    form?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const username = (form.elements.namedItem("username") as HTMLInputElement).value.trim();
+      const password = (form.elements.namedItem("password") as HTMLInputElement).value;
+      const labelField = (form.elements.namedItem("label") as HTMLInputElement).value.trim();
+      void this.createOperator(username, password, labelField || undefined);
+    });
+  }
+
+  private async refreshOperators(): Promise<void> {
+    try {
+      const { operators } = await jsonFetch<{ operators: OperatorView[] }>(
+        "/admin/api/operators",
+      );
+      const tbody = $<HTMLTableSectionElement>("[data-rsm-operators-table] tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      for (const op of operators) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><code>${escapeHtml(op.username)}</code></td>
+          <td>${escapeHtml(op.label ?? "")}</td>
+          <td>${op.isRoot ? "root" : "operator"}</td>
+          <td>${formatDate(op.createdAt)}</td>
+          <td>${formatDate(op.lastLoginAt)}</td>`;
+        tbody.appendChild(tr);
+      }
+    } catch (err: unknown) {
+      this.setOperatorError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  private async createOperator(
+    username: string,
+    password: string,
+    label: string | undefined,
+  ): Promise<void> {
+    this.setOperatorError(null);
+    try {
+      await jsonFetch<{ operator: OperatorView }>("/admin/api/operators", {
+        method: "POST",
+        body: JSON.stringify({ username, password, ...(label ? { label } : {}) }),
+      });
+      const reveal = $<HTMLElement>("[data-rsm-operator-reveal]");
+      const warning = $<HTMLElement>("[data-rsm-operator-reveal-warning]");
+      const value = $<HTMLElement>("[data-rsm-operator-reveal-value]");
+      const copyBtn = $<HTMLButtonElement>("[data-rsm-operator-copy]");
+      const plaintext = `${username} / ${password}`;
+      if (reveal && warning && value && copyBtn) {
+        warning.textContent = "Operator created. Copy the credentials now and share them privately — the password is not shown again.";
+        value.textContent = plaintext;
+        reveal.hidden = false;
+        copyBtn.textContent = "Copy";
+        copyBtn.classList.remove("rsm-btn-copied");
+        copyBtn.onclick = (): void => {
+          void this.copyToClipboard(plaintext, copyBtn);
+        };
+      }
+      const form = $<HTMLFormElement>('[data-rsm-form="new-operator"]');
+      form?.reset();
+      await this.refreshOperators();
+    } catch (err: unknown) {
+      this.setOperatorError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  private setOperatorError(message: string | null): void {
+    const el = $<HTMLElement>("[data-rsm-operator-error]");
+    if (!el) return;
+    if (!message) {
+      el.hidden = true;
+      el.textContent = "";
+    } else {
+      el.hidden = false;
+      el.textContent = message;
+    }
   }
 
   private async signOut(): Promise<void> {
@@ -521,6 +621,18 @@ class AdminApp {
       tbody.appendChild(tr);
     }
   }
+}
+
+function randomPassword(length: number): string {
+  const alphabet =
+    "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const array = new Uint32Array(length);
+  crypto.getRandomValues(array);
+  let out = "";
+  for (let i = 0; i < length; i += 1) {
+    out += alphabet[array[i]! % alphabet.length];
+  }
+  return out;
 }
 
 function escapeHtml(value: string): string {
