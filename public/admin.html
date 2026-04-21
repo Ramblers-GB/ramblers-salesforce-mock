@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ramblers Salesforce API — Mock Admin</title>
+  <link rel="stylesheet" href="/admin.css" />
+  <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml" />
+</head>
+<body>
+<header class="rsm-header">
+  <div class="rsm-brand">
+    <img src="/brand/ramblers-mark.svg" alt="" width="36" height="36" />
+    <div>
+      <div class="rsm-brand-title">Ramblers Salesforce API</div>
+      <div class="rsm-brand-subtitle">Mock Admin</div>
+    </div>
+  </div>
+  <nav class="rsm-nav">
+    <a href="/docs" target="_blank" rel="noopener">API Docs</a>
+    <a href="https://github.com/nbarrett/ramblers-salesforce-mock" target="_blank" rel="noopener">GitHub</a>
+    <span class="rsm-session" data-rsm-session></span>
+  </nav>
+</header>
+
+<main class="rsm-main">
+
+  <section class="rsm-view" data-rsm-view="login" hidden>
+    <h1>Sign in</h1>
+    <p class="rsm-muted">Operator accounts are isolated: you see only the tenants you own.</p>
+
+    <div class="rsm-tabs">
+      <button class="rsm-tab" data-rsm-tab="password" aria-selected="true">Username &amp; password</button>
+      <button class="rsm-tab" data-rsm-tab="bootstrap">Bootstrap token</button>
+    </div>
+
+    <form class="rsm-form" data-rsm-form="login-password">
+      <label>Username <input name="username" autocomplete="username" required /></label>
+      <label>Password <input name="password" type="password" autocomplete="current-password" required /></label>
+      <button type="submit" class="rsm-btn rsm-btn-primary">Sign in</button>
+    </form>
+
+    <form class="rsm-form" data-rsm-form="login-bootstrap" hidden>
+      <label>Bootstrap token <input name="bootstrapToken" type="password" autocomplete="off" required /></label>
+      <p class="rsm-muted">For first-run setup. Grants access as the root operator.</p>
+      <button type="submit" class="rsm-btn rsm-btn-primary">Sign in</button>
+    </form>
+
+    <p class="rsm-error" data-rsm-login-error hidden></p>
+  </section>
+
+  <section class="rsm-view" data-rsm-view="dashboard" hidden>
+    <aside class="rsm-sidebar">
+      <div class="rsm-sidebar-head">
+        <h2>Tenants</h2>
+        <button class="rsm-btn rsm-btn-small" data-rsm-btn="new-tenant">+ New</button>
+      </div>
+      <ul class="rsm-tenant-list" data-rsm-tenant-list></ul>
+      <form class="rsm-form rsm-tenant-form" data-rsm-form="new-tenant" hidden>
+        <label>Code <input name="code" placeholder="KT50" required maxlength="6" /></label>
+        <label>Kind
+          <select name="kind">
+            <option value="group">Group (4-char)</option>
+            <option value="area">Area (2-char)</option>
+          </select>
+        </label>
+        <label>Display name <input name="name" placeholder="East Kent Walking Group" /></label>
+        <div class="rsm-form-actions">
+          <button type="button" class="rsm-btn rsm-btn-ghost" data-rsm-btn="cancel-tenant">Cancel</button>
+          <button type="submit" class="rsm-btn rsm-btn-primary">Create</button>
+        </div>
+      </form>
+    </aside>
+
+    <section class="rsm-detail" data-rsm-detail hidden>
+      <header class="rsm-detail-head">
+        <h2 data-rsm-detail-title>—</h2>
+        <p data-rsm-detail-meta class="rsm-muted"></p>
+      </header>
+
+      <article class="rsm-panel">
+        <h3>API tokens</h3>
+        <p class="rsm-muted">Each token is scoped to this tenant and shown in full only at mint time.</p>
+        <form class="rsm-form rsm-inline" data-rsm-form="mint-token">
+          <label>Label <input name="label" placeholder="MailMan - NS03 dev" required /></label>
+          <button type="submit" class="rsm-btn rsm-btn-primary">Mint token</button>
+        </form>
+        <pre class="rsm-token-reveal" data-rsm-token-reveal hidden></pre>
+        <table class="rsm-table" data-rsm-token-table>
+          <thead><tr><th>Prefix</th><th>Label</th><th>Created</th><th>Last used</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </article>
+
+      <article class="rsm-panel">
+        <h3>Load member data</h3>
+        <p class="rsm-muted">
+          Upload an Insight Hub ExportAll.xlsx, or generate synthetic rows for this tenant.
+          Either action replaces the tenant's current dataset.
+        </p>
+
+        <form class="rsm-form rsm-inline" data-rsm-form="upload">
+          <label>ExportAll.xlsx <input type="file" name="file" accept=".xlsx" required /></label>
+          <button type="submit" class="rsm-btn rsm-btn-primary">Upload</button>
+        </form>
+
+        <form class="rsm-form rsm-inline" data-rsm-form="generate">
+          <label>Generate <input type="number" name="count" min="1" max="50000" value="250" required /> rows</label>
+          <label>Seed <input type="number" name="seed" placeholder="optional" /></label>
+          <button type="submit" class="rsm-btn rsm-btn-primary">Generate &amp; ingest</button>
+          <button type="submit" class="rsm-btn rsm-btn-ghost" data-rsm-btn="download-only" formnovalidate>Download only</button>
+        </form>
+
+        <pre class="rsm-ingest-result" data-rsm-ingest-result hidden></pre>
+      </article>
+
+      <article class="rsm-panel">
+        <h3>Members <small class="rsm-muted">(first 20)</small></h3>
+        <table class="rsm-table" data-rsm-members-table>
+          <thead><tr><th>Mem No.</th><th>Name</th><th>Email</th><th>Email consent</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </article>
+    </section>
+
+    <section class="rsm-detail-empty" data-rsm-detail-empty>
+      <p class="rsm-muted">Select a tenant on the left, or create a new one.</p>
+    </section>
+  </section>
+
+</main>
+
+<footer class="rsm-footer">
+  <p>
+    Reference mock for the day-one Ramblers Salesforce API contract —
+    <a href="https://github.com/nbarrett/ngx-ramblers/issues/209" target="_blank" rel="noopener">#209</a>.
+    Not an official Ramblers property.
+  </p>
+</footer>
+
+<script src="/admin.js" defer></script>
+</body>
+</html>

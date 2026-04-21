@@ -11,6 +11,8 @@ import { logger } from "./logger.js";
 import { connectMongo, mongoConnectionState } from "./db/connection.js";
 import { createApiRouter } from "./api/members.router.js";
 import { getOpenApiDocument } from "./api/openapi.js";
+import { createAdminRouter } from "./admin/admin.router.js";
+import { seedRootOperator } from "./admin/seed.js";
 
 const config = loadConfig();
 
@@ -67,6 +69,7 @@ export async function createApp(): Promise<express.Express> {
   }));
 
   app.use(createApiRouter());
+  app.use(createAdminRouter());
 
   app.use(express.static(publicDir, { index: false }));
 
@@ -79,6 +82,7 @@ export async function createApp(): Promise<express.Express> {
 
 async function main(): Promise<void> {
   await connectMongo();
+  await seedRootOperator();
   const app = await createApp();
   app.listen(config.PORT, () => {
     logger.info(

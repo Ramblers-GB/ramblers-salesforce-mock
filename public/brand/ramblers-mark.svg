@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36" height="36" role="img" aria-label="Ramblers mock server mark">
+  <title>Ramblers Salesforce Mock</title>
+  <circle cx="18" cy="18" r="17" fill="#9BC8AB" />
+  <path d="M4 24 Q10 18, 15 22 T26 21 T34 23" stroke="#404141" stroke-width="1.8" fill="none" stroke-linecap="round" />
+  <path d="M4 27 Q10 22, 15 25 T26 24 T34 26" stroke="#F9B104" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.85" />
+  <circle cx="12" cy="10" r="2" fill="#404141" />
+  <path d="M10 13 L10 20 L14 15 L18 22" stroke="#404141" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+</svg>
