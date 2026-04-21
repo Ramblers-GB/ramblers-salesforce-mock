@@ -1,0 +1,30 @@
+app = "ramblers-salesforce-mock"
+primary_region = "lhr"
+
+[build]
+
+[env]
+  PORT = "8080"
+  NODE_ENV = "production"
+  PUBLIC_BASE_URL = "https://salesforce-mock.ngx-ramblers.org.uk"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/healthz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
