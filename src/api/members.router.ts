@@ -6,6 +6,7 @@ import type { MemberDoc } from "../db/models/index.js";
 import { bearerAuth, requireTenantMatch } from "../auth/bearerAuth.js";
 import { toSalesforceMember } from "./memberMapper.js";
 import { apiError } from "./errors.js";
+import { asyncHandler } from "./asyncHandler.js";
 import type {
   ConsentUpdateResponse,
   MemberChange,
@@ -47,8 +48,8 @@ export function createApiRouter(): Router {
 
   router.get(
     "/api/groups/:groupCode/members",
-    bearerAuth,
-    async (req: Request, res: Response) => {
+    asyncHandler(bearerAuth),
+    asyncHandler(async (req: Request, res: Response) => {
       const pathTenant = req.params["groupCode"];
       if (!pathTenant) {
         apiError(res, "BAD_REQUEST", "groupCode path parameter is required");
@@ -121,13 +122,13 @@ export function createApiRouter(): Router {
       }
 
       res.json(response);
-    },
+    }),
   );
 
   router.post(
     "/api/members/:membershipNumber/consent",
-    bearerAuth,
-    async (req: Request, res: Response) => {
+    asyncHandler(bearerAuth),
+    asyncHandler(async (req: Request, res: Response) => {
       const membershipNumber = req.params["membershipNumber"];
       if (!membershipNumber) {
         apiError(res, "BAD_REQUEST", "membershipNumber path parameter is required");
@@ -232,7 +233,7 @@ export function createApiRouter(): Router {
       }
 
       res.status(200).json(response);
-    },
+    }),
   );
 
   return router;

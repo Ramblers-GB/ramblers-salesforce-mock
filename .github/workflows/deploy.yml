@@ -1,9 +1,23 @@
 name: Deploy
 
+# Deploy runs on push to main once the Fly app and FLY_API_TOKEN secret exist.
+# Until then we keep it manual-only via workflow_dispatch to avoid red builds
+# on commits that do not touch deployment-affecting code.
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
+    paths:
+      - "src/**"
+      - "schema/**"
+      - "scripts/**"
+      - "public/**"
+      - "Dockerfile"
+      - "fly.toml"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/deploy.yml"
 
 concurrency:
   group: deploy
@@ -31,6 +45,10 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
+    # Only run the Fly deploy step when the secret is configured on the repo,
+    # so an early push that hits main before infra exists fails clearly at the
+    # job filter rather than halfway through a flyctl invocation.
+    if: ${{ vars.FLY_DEPLOY_ENABLED == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master

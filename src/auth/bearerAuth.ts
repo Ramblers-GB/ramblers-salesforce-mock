@@ -5,7 +5,6 @@ import { apiError } from "../api/errors.js";
 import { extractBearerToken, hashToken } from "./tokens.js";
 
 declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       apiToken?: TokenDoc;

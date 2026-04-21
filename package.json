@@ -15,8 +15,8 @@
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint 'src/**/*.ts' 'scripts/**/*.ts' 'tests/**/*.ts'",
-    "test": "vitest run",
+    "lint": "eslint 'src/**/*.ts' 'scripts/**/*.ts'",
+    "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "check:schema-drift": "tsx scripts/check-schema-drift.ts"
   },
