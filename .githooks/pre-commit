@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -e
+
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(src|scripts)/.*\.ts$' || true)
+
+if [ -z "$STAGED_FILES" ]; then
+  exit 0
+fi
+
+echo "Running lint on staged files..."
+cd "$ROOT_DIR"
+npx eslint $STAGED_FILES
+echo "Staged file lint passed!"

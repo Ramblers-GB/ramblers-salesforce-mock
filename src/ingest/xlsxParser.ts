@@ -133,7 +133,7 @@ export async function writeExportAll(
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "ramblers-salesforce-mock (synthetic)";
   workbook.created = new Date();
-  const sheet = workbook.addWorksheet("ExportAll");
+  const sheet = workbook.addWorksheet("Full List");
 
   sheet.columns = INSIGHT_HUB_COLUMNS.map((c) => ({
     header: c.header,

@@ -1,5 +1,8 @@
 FROM node:20-alpine AS build
 WORKDIR /app
+# git is needed at build time so `npm run build:release-notes` can snapshot
+# git log into dist/build-info.json. The runtime image does not need git.
+RUN apk add --no-cache git
 COPY package.json package-lock.json* ./
 RUN npm ci
 COPY tsconfig.json eslint.config.mjs ./
@@ -10,6 +13,9 @@ COPY schema ./schema
 # adds admin.js/.map. The runtime stage picks up the populated directory via
 # `COPY --from=build`.
 COPY public ./public
+# .git is required only by the release-notes build step. If a CI build doesn't
+# include it, the script falls back to an empty entries array.
+COPY .git ./.git
 RUN npm run build
 
 FROM node:20-alpine AS runtime

@@ -8,3 +8,4 @@ coverage
 public/admin.js
 public/admin.js.map
 *.tsbuildinfo
+/.claude/worktrees/

@@ -3,6 +3,106 @@ import type { Request, Response } from "express";
 import multer from "multer";
 import { z } from "zod";
 import path from "node:path";
+import { readFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
+
+interface ReleaseEntry {
+  sha: string;
+  author: string;
+  date: string;
+  subject: string;
+  body: string;
+}
+
+interface BuildInfo {
+  version: string;
+  gitSha: string;
+  generatedAt: string;
+  entries: ReleaseEntry[];
+}
+
+let cachedBuildInfo: BuildInfo | undefined;
+
+/**
+ * Loads version + release notes from the pre-baked dist/build-info.json
+ * (created by `npm run build:release-notes`). Falls back to live `git log`
+ * for dev convenience when the file isn't present yet.
+ */
+async function loadBuildInfo(): Promise<BuildInfo> {
+  if (cachedBuildInfo) return cachedBuildInfo;
+
+  let version = "0.0.0";
+  try {
+    const pkg = JSON.parse(
+      await readFile(path.resolve(process.cwd(), "package.json"), "utf-8"),
+    ) as { version?: string };
+    version = pkg.version ?? "0.0.0";
+  } catch {
+    // Fall through to default.
+  }
+
+  // Prefer the build-time snapshot.
+  try {
+    const raw = await readFile(
+      path.resolve(process.cwd(), "dist", "build-info.json"),
+      "utf-8",
+    );
+    const parsed = JSON.parse(raw) as BuildInfo;
+    cachedBuildInfo = { ...parsed, version: parsed.version ?? version };
+    return cachedBuildInfo;
+  } catch {
+    // No snapshot — fall back to live git log (dev mode).
+  }
+
+  const FS = "\x1f";
+  const RS = "\x1e";
+  let entries: ReleaseEntry[] = [];
+  let gitSha = "";
+  try {
+    const { stdout } = await execFileAsync(
+      "git",
+      [
+        "-C", process.cwd(),
+        "log", "-50",
+        `--pretty=format:%H${FS}%an${FS}%aI${FS}%s${FS}%b${RS}`,
+      ],
+      { maxBuffer: 4 * 1024 * 1024 },
+    );
+    entries = stdout
+      .split(RS)
+      .map((chunk) => chunk.replace(/^\n+/, "").trim())
+      .filter((chunk) => chunk.length > 0)
+      .map((chunk) => {
+        const [sha, author, date, subject, ...rest] = chunk.split(FS);
+        return {
+          sha: (sha ?? "").slice(0, 7),
+          author: author ?? "",
+          date: date ?? "",
+          subject: subject ?? "",
+          body: rest.join(FS).trim(),
+        };
+      });
+    try {
+      const r = await execFileAsync("git", ["-C", process.cwd(), "rev-parse", "--short", "HEAD"]);
+      gitSha = r.stdout.trim();
+    } catch {
+      // ignore
+    }
+  } catch (err) {
+    logger.warn({ err }, "loadBuildInfo: git log fallback failed; release notes will be empty");
+  }
+
+  cachedBuildInfo = {
+    version,
+    gitSha,
+    generatedAt: new Date().toISOString(),
+    entries,
+  };
+  return cachedBuildInfo;
+}
 import { Operator, Tenant, ApiToken, Member } from "../db/models/index.js";
 import type { OperatorDoc, TenantDoc } from "../db/models/index.js";
 import { asyncHandler } from "../api/asyncHandler.js";
@@ -13,6 +113,11 @@ import { logger } from "../logger.js";
 import { generateToken } from "../auth/tokens.js";
 import { parseExportAll, writeExportAll } from "../ingest/xlsxParser.js";
 import { generateSyntheticMembers } from "../ingest/synthetic.js";
+import type {
+  ConsentDistribution,
+  RoleProportions,
+  SyntheticOptions,
+} from "../ingest/synthetic.js";
 import { upsertMembers } from "../ingest/upsert.js";
 import { toSalesforceMember } from "../api/memberMapper.js";
 
@@ -45,10 +150,52 @@ const createTokenSchema = z.object({
   label: z.string().trim().min(1).max(80),
 });
 
+const probability = z.coerce.number().min(0).max(1);
+
+const consentIndependentSchema = z.object({
+  mode: z.literal("independent"),
+  emailMarketingConsent: probability,
+  groupMarketingConsent: probability,
+  areaMarketingConsent: probability,
+  otherMarketingConsent: probability,
+  postDirectMarketing: probability,
+  telephoneDirectMarketing: probability,
+});
+
+const consentJointSchema = z.object({
+  mode: z.literal("joint"),
+  combinations: z.array(z.object({
+    emailMarketingConsent: z.boolean(),
+    groupMarketingConsent: z.boolean(),
+    areaMarketingConsent: z.boolean(),
+    otherMarketingConsent: z.boolean(),
+    postDirectMarketing: z.boolean(),
+    telephoneDirectMarketing: z.boolean(),
+    weight: z.coerce.number().min(0).max(100),
+  })).min(1),
+});
+
+const consentDistributionSchema = z.discriminatedUnion("mode", [
+  consentIndependentSchema,
+  consentJointSchema,
+]);
+
+const roleProportionsSchema = z.object({
+  walkLeader: probability,
+  emailSender: probability,
+  viewMembershipData: probability,
+});
+
 const generateSchema = z.object({
-  count: z.coerce.number().int().min(1).max(50_000),
+  count: z.coerce.number().int().min(1).max(10_000),
   seed: z.coerce.number().int().optional(),
   downloadOnly: z.coerce.boolean().optional(),
+  emailTemplate: z.string().trim().min(3).max(200).optional(),
+  emailDomain: z.string().trim().min(3).max(120).optional(),
+  emailBase: z.string().trim().min(1).max(64).optional(),
+  consentDistribution: consentDistributionSchema.optional(),
+  roleProportions: roleProportionsSchema.optional(),
+  region: z.enum(["mixed", "kent", "staffordshire", "newcastle", "hampshire"]).optional(),
 });
 
 const createOperatorSchema = z.object({
@@ -107,6 +254,10 @@ export function createAdminRouter(): Router {
   });
 
   router.get("/admin/dashboard", requireOperator("redirect"), (_req, res) => {
+    res.sendFile(path.resolve(process.cwd(), "public", "admin.html"));
+  });
+
+  router.get("/admin/release-notes", requireOperator("redirect"), (_req, res) => {
     res.sendFile(path.resolve(process.cwd(), "public", "admin.html"));
   });
 
@@ -302,17 +453,39 @@ export function createAdminRouter(): Router {
         res.status(400).json({ error: { code: "BAD_REQUEST", message: parsed.error.message } });
         return;
       }
-      const opts = {
+      const opts: SyntheticOptions = {
         count: parsed.data.count,
         tenantCode: tenant.code,
         tenantKind: tenant.kind,
         ...(tenant.name !== undefined ? { groupName: tenant.name } : {}),
         ...(parsed.data.seed !== undefined ? { seed: parsed.data.seed } : {}),
+        ...(parsed.data.emailTemplate !== undefined ? { emailTemplate: parsed.data.emailTemplate } : {}),
+        ...(parsed.data.emailDomain !== undefined ? { emailDomain: parsed.data.emailDomain } : {}),
+        ...(parsed.data.emailBase !== undefined ? { emailBase: parsed.data.emailBase } : {}),
+        ...(parsed.data.consentDistribution !== undefined
+          ? { consentDistribution: parsed.data.consentDistribution as ConsentDistribution }
+          : {}),
+        ...(parsed.data.roleProportions !== undefined
+          ? { roleProportions: parsed.data.roleProportions as RoleProportions }
+          : {}),
+        ...(parsed.data.region !== undefined ? { region: parsed.data.region } : {}),
       };
-      const rows = generateSyntheticMembers(opts);
-      const xlsx = await writeExportAll(rows);
+
+      let rows;
+      try {
+        rows = generateSyntheticMembers(opts);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        res.status(400).json({ error: { code: "BAD_REQUEST", message } });
+        return;
+      }
 
       if (parsed.data.downloadOnly) {
+        // Round-trip through the xlsx writer so the download is exactly the
+        // 36-column Insight Hub format. Granular consent + roles do not
+        // appear here by design — those columns aren't part of the
+        // contract NGX's member-bulk-load.ts consumes.
+        const xlsx = await writeExportAll(rows as unknown as ReadonlyArray<Record<string, unknown>>);
         res.setHeader(
           "Content-Type",
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -325,14 +498,45 @@ export function createAdminRouter(): Router {
         return;
       }
 
-      const parseResult = await parseExportAll(xlsx);
-      const upsertResult = await upsertMembers(tenant.code, parseResult.members);
+      // Direct ingest — bypasses xlsx so granular consent + role flags
+      // survive into the DB, where they're served by the public API.
+      const upsertResult = await upsertMembers(tenant.code, rows);
       res.json({
         tenantCode: tenant.code,
         generated: rows.length,
         ingest: upsertResult,
-        downloadUrl: `/admin/api/tenants/${tenant.code}/generate?count=${rows.length}&downloadOnly=true`,
       });
+    }),
+  );
+
+  router.get(
+    "/admin/api/tenants/:code/export-insight-hub",
+    requireOperator(),
+    asyncHandler(async (req: Request, res: Response) => {
+      const tenant = await assertOwnsTenant(req.params["code"]!, req.operator!);
+      const docs = await Member.find({
+        tenantCode: tenant.code,
+        removed: { $ne: true },
+      }).sort({ membershipNumber: 1 }).exec();
+
+      // The xlsx writer is the source of truth for the 36-column Insight
+      // Hub format; passing raw doc objects keeps it 1:1 with the upload
+      // path. Granular consent + role fields are present on the docs but
+      // ignored by the writer (it only reads INSIGHT_HUB_COLUMNS keys),
+      // so the output is exactly the Insight Hub schema NGX's
+      // member-bulk-load.ts consumes — no extras, no omissions.
+      const rows = docs.map((d) => d.toObject() as unknown as Record<string, unknown>);
+      const xlsx = await writeExportAll(rows);
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="InsightHub-${tenant.code}-${rows.length}.xlsx"`,
+      );
+      res.send(xlsx);
     }),
   );
 
@@ -387,6 +591,23 @@ export function createAdminRouter(): Router {
     asyncHandler(async (_req: Request, res: Response) => {
       const ops = await Operator.find({}).sort({ createdAt: -1 }).exec();
       res.json({ operators: ops.map(viewOperator) });
+    }),
+  );
+
+  router.get(
+    "/admin/api/version",
+    asyncHandler(async (_req: Request, res: Response) => {
+      const info = await loadBuildInfo();
+      res.json({ version: info.version, gitSha: info.gitSha, generatedAt: info.generatedAt });
+    }),
+  );
+
+  router.get(
+    "/admin/api/release-notes",
+    requireOperator(),
+    asyncHandler(async (_req: Request, res: Response) => {
+      const info = await loadBuildInfo();
+      res.json({ entries: info.entries });
     }),
   );
 

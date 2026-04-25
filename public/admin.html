@@ -18,8 +18,22 @@
     </div>
   </div>
   <nav class="rsm-nav">
-    <a href="/docs" target="_blank" rel="noopener">API Docs</a>
-    <a href="https://github.com/nbarrett/ramblers-salesforce-mock" target="_blank" rel="noopener">GitHub</a>
+    <a href="/admin/dashboard" data-rsm-nav="dashboard">Dashboard</a>
+    <a href="/admin/release-notes" data-rsm-nav="release-notes">Release notes</a>
+    <a class="rsm-nav-icon" href="/docs" target="_blank" rel="noopener" title="OpenAPI / Swagger UI">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2 3 7v10l9 5 9-5V7z"/>
+        <path d="m9 11 3 3 3-3"/>
+        <path d="M9 7v3"/><path d="M15 7v3"/>
+      </svg>
+      <span>API Docs</span>
+    </a>
+    <a class="rsm-nav-icon" href="https://github.com/nbarrett/ramblers-salesforce-mock" target="_blank" rel="noopener" title="Source on GitHub">
+      <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" focusable="false" fill="currentColor">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+      </svg>
+      <span>GitHub</span>
+    </a>
     <span class="rsm-session" data-rsm-session></span>
   </nav>
 </header>
@@ -113,6 +127,13 @@
         <p data-rsm-detail-meta class="rsm-muted"></p>
       </header>
 
+      <nav class="rsm-detail-tabs" data-rsm-detail-tabs role="tablist">
+        <button type="button" class="rsm-detail-tab" data-rsm-detail-tab="members" role="tab" aria-selected="true">Members</button>
+        <button type="button" class="rsm-detail-tab" data-rsm-detail-tab="generate" role="tab" aria-selected="false">Generate</button>
+        <button type="button" class="rsm-detail-tab" data-rsm-detail-tab="tokens" role="tab" aria-selected="false">Tokens</button>
+      </nav>
+
+      <div class="rsm-detail-tab-panel" data-rsm-detail-panel="tokens" hidden>
       <article class="rsm-panel">
         <h3>API tokens</h3>
         <p class="rsm-muted">Each token is scoped to this tenant and shown in full only once, at the moment it is generated.</p>
@@ -132,30 +153,208 @@
           <tbody></tbody>
         </table>
       </article>
+      </div><!-- /tokens panel -->
 
+      <div class="rsm-detail-tab-panel" data-rsm-detail-panel="generate" hidden>
       <article class="rsm-panel">
-        <h3>Load member data</h3>
+        <h3>Generate synthetic data</h3>
         <p class="rsm-muted">
-          Upload an Insight Hub ExportAll.xlsx, or generate synthetic rows for this tenant.
-          Either action replaces the tenant's current dataset.
+          Create plausibly-shaped member rows under a configurable template. Either save them
+          straight into this tenant's dataset (and serve them via the API), or stream them
+          out as a 36-column Insight Hub xlsx.
         </p>
 
-        <form class="rsm-form rsm-inline" data-rsm-form="upload">
-          <label>ExportAll.xlsx <input type="file" name="file" accept=".xlsx" required /></label>
-          <button type="submit" class="rsm-btn rsm-btn-primary">Upload</button>
-        </form>
+        <form class="rsm-form rsm-form-stacked" data-rsm-form="generate">
 
-        <form class="rsm-form rsm-inline" data-rsm-form="generate">
-          <label>Row count <input type="number" name="count" min="1" max="50000" value="250" required /></label>
-          <label>Seed (optional) <input type="number" name="seed" placeholder="for reproducibility" /></label>
-          <button type="submit" class="rsm-btn rsm-btn-primary">Generate &amp; ingest</button>
-          <button type="submit" class="rsm-btn rsm-btn-ghost" data-rsm-btn="download-only" formnovalidate>Download only</button>
+          <fieldset class="rsm-fieldset">
+            <legend>Size &amp; reproducibility</legend>
+            <div class="rsm-field-row">
+              <label>Row count <input type="number" name="count" min="1" max="10000" value="1000" required /></label>
+              <label>Seed (optional) <input type="number" name="seed" placeholder="for reproducibility" /></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="rsm-fieldset">
+            <legend>Geography</legend>
+            <p class="rsm-muted rsm-fieldset-help">
+              Pool of towns and postcode prefixes to draw from. <em>Mixed UK</em> uses every region's pool combined.
+            </p>
+            <div class="rsm-field-row">
+              <label>Region
+                <select name="region">
+                  <option value="mixed" selected>Mixed UK</option>
+                  <option value="kent">Kent</option>
+                  <option value="staffordshire">Staffordshire (incl. Stoke, Newcastle-under-Lyme)</option>
+                  <option value="newcastle">Newcastle upon Tyne &amp; the North East</option>
+                  <option value="hampshire">Hampshire</option>
+                </select>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="rsm-fieldset">
+            <legend>Email pattern</legend>
+            <p class="rsm-muted rsm-fieldset-help">
+              Placeholders: <code>{firstname}</code> <code>{surname}</code> <code>{nn}</code>
+              <code>{membershipNumber}</code> <code>{groupCode}</code> <code>{domain}</code> <code>{base}</code>.
+              Default domain <code>ngx-ramblers.org.uk</code> is unreachable from real Brevo lists.
+            </p>
+            <div class="rsm-preset-list" data-rsm-email-presets>
+              <label class="rsm-preset">
+                <span class="rsm-preset-main">
+                  <input type="radio" name="emailPreset" value="distinct" checked />
+                  <code class="rsm-preset-code">{firstname}.{surname}{nn}@{domain}</code>
+                </span>
+                <span class="rsm-preset-help">distinct addresses; the domain needs a catch-all to receive mail</span>
+              </label>
+              <label class="rsm-preset">
+                <span class="rsm-preset-main">
+                  <input type="radio" name="emailPreset" value="plus" />
+                  <code class="rsm-preset-code">{base}+m{membershipNumber}@{domain}</code>
+                </span>
+                <span class="rsm-preset-help">plus-addressing; every member's mail lands in one shared inbox</span>
+              </label>
+              <label class="rsm-preset">
+                <span class="rsm-preset-main">
+                  <input type="radio" name="emailPreset" value="minimal" />
+                  <code class="rsm-preset-code">member{membershipNumber}@{domain}</code>
+                </span>
+                <span class="rsm-preset-help">minimal, fully synthetic</span>
+              </label>
+              <label class="rsm-preset">
+                <span class="rsm-preset-main">
+                  <input type="radio" name="emailPreset" value="custom" />
+                  <span class="rsm-preset-custom-label">Custom</span>
+                  <input type="text" name="emailTemplate" placeholder="{firstname}-{surname}@{domain}" />
+                </span>
+                <span class="rsm-preset-help">build your own from any of the placeholders above</span>
+              </label>
+            </div>
+            <div class="rsm-field-row">
+              <label>Domain <input type="text" name="emailDomain" value="ngx-ramblers.org.uk" required /></label>
+              <label>Base local-part (for plus-addressing) <input type="text" name="emailBase" value="test" /></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="rsm-fieldset">
+            <legend>Consent distribution</legend>
+            <div class="rsm-radio-list rsm-radio-inline">
+              <label><input type="radio" name="consentMode" value="independent" checked /> Independent (per-flag rolls)</label>
+              <label><input type="radio" name="consentMode" value="joint" /> Joint (combination probability table)</label>
+            </div>
+
+            <div class="rsm-consent-independent" data-rsm-consent-independent>
+              <p class="rsm-muted rsm-fieldset-help">Each member's flags are rolled independently against these probabilities.</p>
+
+              <h4 class="rsm-channel-title">
+                <span class="rsm-channel-badge rsm-channel-xlsx">xlsx + API</span>
+                Standard Insight Hub flags
+              </h4>
+              <p class="rsm-muted rsm-fieldset-help">
+                Round-trip through both the public API and the Insight Hub <code>ExportAll.xlsx</code> download.
+              </p>
+              <table class="rsm-slider-table">
+                <thead><tr><th>Flag</th><th>True %</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td>emailMarketingConsent <span class="rsm-muted">(HQ marketing)</span></td>
+                      <td><input type="number" name="emailMarketingConsent" min="0" max="100" value="70" required /></td>
+                      <td><input type="range" data-rsm-slider="emailMarketingConsent" min="0" max="100" value="70" /></td></tr>
+                  <tr><td>postDirectMarketing</td>
+                      <td><input type="number" name="postDirectMarketing" min="0" max="100" value="40" required /></td>
+                      <td><input type="range" data-rsm-slider="postDirectMarketing" min="0" max="100" value="40" /></td></tr>
+                  <tr><td>telephoneDirectMarketing</td>
+                      <td><input type="number" name="telephoneDirectMarketing" min="0" max="100" value="20" required /></td>
+                      <td><input type="range" data-rsm-slider="telephoneDirectMarketing" min="0" max="100" value="20" /></td></tr>
+                </tbody>
+              </table>
+
+              <h4 class="rsm-channel-title">
+                <span class="rsm-channel-badge rsm-channel-api">API only</span>
+                Granular consent
+              </h4>
+              <p class="rsm-muted rsm-fieldset-help">
+                Stored on the member record in this server's database and returned by the
+                public API. <strong>Not</strong> part of the 36-column Insight Hub schema, so
+                these don't appear in the downloaded xlsx.
+              </p>
+              <table class="rsm-slider-table">
+                <thead><tr><th>Flag</th><th>True %</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td>groupMarketingConsent</td>
+                      <td><input type="number" name="groupMarketingConsent" min="0" max="100" value="60" required /></td>
+                      <td><input type="range" data-rsm-slider="groupMarketingConsent" min="0" max="100" value="60" /></td></tr>
+                  <tr><td>areaMarketingConsent</td>
+                      <td><input type="number" name="areaMarketingConsent" min="0" max="100" value="50" required /></td>
+                      <td><input type="range" data-rsm-slider="areaMarketingConsent" min="0" max="100" value="50" /></td></tr>
+                  <tr><td>otherMarketingConsent</td>
+                      <td><input type="number" name="otherMarketingConsent" min="0" max="100" value="30" required /></td>
+                      <td><input type="range" data-rsm-slider="otherMarketingConsent" min="0" max="100" value="30" /></td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="rsm-consent-joint" data-rsm-consent-joint hidden>
+              <p class="rsm-muted rsm-fieldset-help">
+                Probability table over flag combinations. Weights must sum to 100. Useful for correlated scenarios
+                ("group email yes / HQ marketing no").
+              </p>
+              <table class="rsm-joint-table" data-rsm-joint-table>
+                <thead>
+                  <tr>
+                    <th>email</th><th>group</th><th>area</th><th>other</th><th>post</th><th>tel</th><th>weight</th><th></th>
+                  </tr>
+                </thead>
+                <tbody data-rsm-joint-body></tbody>
+              </table>
+              <div class="rsm-joint-actions">
+                <button type="button" class="rsm-btn rsm-btn-small rsm-btn-ghost" data-rsm-joint-add>+ Add row</button>
+                <span class="rsm-joint-sum" data-rsm-joint-sum>Sum: 0</span>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="rsm-fieldset">
+            <legend>Role proportions <span class="rsm-channel-badge rsm-channel-api">API only</span></legend>
+            <p class="rsm-muted rsm-fieldset-help">
+              Set on each member's primary <code>groupMemberships[].roles</code>. Roles ride
+              only through this server's API — they're not part of the 36-column Insight Hub
+              schema, so they don't appear in the downloaded xlsx.
+            </p>
+            <table class="rsm-slider-table">
+              <thead><tr><th>Role</th><th>True %</th><th></th></tr></thead>
+              <tbody>
+                <tr><td>walkLeader</td>
+                    <td><input type="number" name="role-walkLeader" min="0" max="100" value="8" required /></td>
+                    <td><input type="range" data-rsm-slider="role-walkLeader" min="0" max="100" value="8" /></td></tr>
+                <tr><td>emailSender</td>
+                    <td><input type="number" name="role-emailSender" min="0" max="100" value="5" required /></td>
+                    <td><input type="range" data-rsm-slider="role-emailSender" min="0" max="100" value="5" /></td></tr>
+                <tr><td>viewMembershipData</td>
+                    <td><input type="number" name="role-viewMembershipData" min="0" max="100" value="3" required /></td>
+                    <td><input type="range" data-rsm-slider="role-viewMembershipData" min="0" max="100" value="3" /></td></tr>
+              </tbody>
+            </table>
+          </fieldset>
+
+          <p class="rsm-muted rsm-fieldset-help">
+            Two ways to take the generated rows away. <strong>Generate &amp; import</strong> = make the rows
+            <em>and</em> save them into this server's database, replacing the tenant's current dataset
+            (so the public API returns them). <strong>Generate &amp; download xlsx</strong> = make the rows
+            <em>and</em> stream them as a 36-column Insight Hub xlsx, without touching the database
+            (so any consumer that already reads Insight Hub <code>ExportAll.xlsx</code> can load it).
+          </p>
+          <div class="rsm-form-actions">
+            <button type="submit" class="rsm-btn rsm-btn-primary">Generate &amp; import</button>
+            <button type="submit" class="rsm-btn rsm-btn-ghost" data-rsm-btn="download-only" formnovalidate>Generate &amp; download xlsx</button>
+          </div>
         </form>
 
         <pre class="rsm-ingest-result" data-rsm-ingest-result hidden></pre>
         <pre class="rsm-ingest-error" data-rsm-ingest-error hidden></pre>
       </article>
+      </div><!-- /generate panel -->
 
+      <div class="rsm-detail-tab-panel" data-rsm-detail-panel="members">
       <article class="rsm-panel">
         <h3>Members <small class="rsm-muted">(first 20)</small></h3>
         <table class="rsm-table" data-rsm-members-table>
@@ -163,11 +362,53 @@
           <tbody></tbody>
         </table>
       </article>
+
+      <article class="rsm-panel">
+        <nav class="rsm-detail-tabs rsm-detail-tabs-sub" data-rsm-sub-tabs role="tablist">
+          <button type="button" class="rsm-detail-tab" data-rsm-sub-tab="upload" role="tab" aria-selected="true">Upload Insight Hub xlsx</button>
+          <button type="button" class="rsm-detail-tab" data-rsm-sub-tab="download" role="tab" aria-selected="false">Insight Hub export</button>
+        </nav>
+
+        <div class="rsm-detail-tab-panel" data-rsm-sub-panel="upload">
+          <p class="rsm-muted">
+            Replace this tenant's dataset with the rows from an Insight Hub <code>ExportAll.xlsx</code> file.
+            Existing members not present in the upload are soft-removed.
+          </p>
+          <form class="rsm-form rsm-inline" data-rsm-form="upload">
+            <label>ExportAll.xlsx <input type="file" name="file" accept=".xlsx" required /></label>
+            <button type="submit" class="rsm-btn rsm-btn-primary">Upload</button>
+          </form>
+        </div>
+
+        <div class="rsm-detail-tab-panel" data-rsm-sub-panel="download" hidden>
+          <p class="rsm-muted">
+            Download the tenant's current dataset as a 36-column
+            <code>InsightHub-&lt;CODE&gt;.xlsx</code> file — exact same shape as Insight Hub's
+            <code>ExportAll.xlsx</code>, suitable for any consumer that already imports that format.
+            Granular consent flags and role assignments are preserved in this server's database
+            but are intentionally not part of the Insight Hub schema and so are not in the export.
+          </p>
+          <button type="button" class="rsm-btn rsm-btn-primary" data-rsm-btn="export-insight-hub">
+            Download Insight Hub xlsx
+          </button>
+        </div>
+      </article>
+      </div><!-- /members panel -->
     </section>
 
     <section class="rsm-detail-empty" data-rsm-detail-empty>
       <p class="rsm-muted">Select a tenant on the left, or create a new one.</p>
     </section>
+  </section>
+
+  <section class="rsm-view rsm-view-release-notes" data-rsm-view="release-notes" hidden>
+    <header class="rsm-page-head">
+      <h1>Release notes</h1>
+      <p class="rsm-muted">Recent commits to this server, parsed from <code>git log</code>.</p>
+    </header>
+    <ol class="rsm-release-list" data-rsm-release-list>
+      <li class="rsm-muted">Loading…</li>
+    </ol>
   </section>
 
 </main>
@@ -176,8 +417,9 @@
   <p>
     Reference implementation of the day-one Ramblers Salesforce API contract
     (<a href="https://github.com/nbarrett/ngx-ramblers/issues/209" target="_blank" rel="noopener">#209</a>).
-    A shared pre-production fixture for NGX Ramblers, MailMan, and the Ramblers HQ Salesforce team.
+    A shared pre-production fixture for NGX-Ramblers, MailMan, and the Ramblers HQ Salesforce team.
   </p>
+  <p class="rsm-version" data-rsm-version></p>
 </footer>
 
 <script src="/admin.js" defer></script>
