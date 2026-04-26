@@ -193,13 +193,24 @@ class AdminApp {
       await this.enterDashboard();
       await this.routeFromUrl();
     } catch {
-      showView("login");
+      this.applyAuthVisibility();
+      await this.routeFromUrl();
+    }
+  }
+
+  private applyAuthVisibility(): void {
+    const dashLink = $<HTMLAnchorElement>('[data-rsm-nav="dashboard"]');
+    if (dashLink) dashLink.hidden = !this.operator;
+    const sess = $<HTMLElement>("[data-rsm-session]");
+    if (sess && !this.operator) {
+      sess.innerHTML = `<a href="/admin/login">Sign in</a>`;
     }
   }
 
   private bindHeaderNav(): void {
     for (const link of $$<HTMLAnchorElement>("[data-rsm-nav]")) {
       link.addEventListener("click", (e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
         e.preventDefault();
         const target = link.dataset["rsmNav"] === "release-notes" ? "/admin/release-notes" : "/admin/dashboard";
         if (window.location.pathname !== target) {
@@ -214,6 +225,10 @@ class AdminApp {
     if (window.location.pathname === "/admin/release-notes") {
       showView("release-notes");
       await this.loadReleaseNotes();
+      return;
+    }
+    if (!this.operator) {
+      showView("login");
       return;
     }
     showView("dashboard");
@@ -394,6 +409,7 @@ class AdminApp {
   }
 
   private async enterDashboard(): Promise<void> {
+    this.applyAuthVisibility();
     showView("dashboard");
     const sess = $<HTMLElement>("[data-rsm-session]");
     if (sess && this.operator) {
@@ -456,12 +472,51 @@ class AdminApp {
           <td>${escapeHtml(op.label ?? "")}</td>
           <td>${op.isRoot ? "root" : "operator"}</td>
           <td>${formatDate(op.createdAt)}</td>
-          <td>${formatDate(op.lastLoginAt)}</td>`;
+          <td>${formatDate(op.lastLoginAt)}</td>
+          <td></td>`;
+        const actions = tr.lastElementChild!;
+        const resetBtn = document.createElement("button");
+        resetBtn.className = "rsm-btn rsm-btn-small rsm-btn-ghost";
+        resetBtn.textContent = "Reset password";
+        resetBtn.addEventListener("click", () => void this.resetOperatorPassword(op.username));
+        actions.appendChild(resetBtn);
         tbody.appendChild(tr);
       }
     } catch (err: unknown) {
       this.setOperatorError(err instanceof Error ? err.message : String(err));
     }
+  }
+
+  private async resetOperatorPassword(username: string): Promise<void> {
+    if (!confirm(`Reset password for "${username}"? A new random password will be generated and shown once.`)) return;
+    this.setOperatorError(null);
+    await this.withBusy(async () => {
+      try {
+        const result = await jsonFetch<{ username: string; password: string; warning: string }>(
+          `/admin/api/operators/${encodeURIComponent(username)}/password`,
+          { method: "POST", body: JSON.stringify({}) },
+        );
+        this.revealOperatorCredentials(`${result.username} / ${result.password}`, result.warning);
+      } catch (err: unknown) {
+        this.setOperatorError(err instanceof Error ? err.message : String(err));
+      }
+    });
+  }
+
+  private revealOperatorCredentials(plaintext: string, warningText: string): void {
+    const reveal = $<HTMLElement>("[data-rsm-operator-reveal]");
+    const warning = $<HTMLElement>("[data-rsm-operator-reveal-warning]");
+    const value = $<HTMLElement>("[data-rsm-operator-reveal-value]");
+    const copyBtn = $<HTMLButtonElement>("[data-rsm-operator-copy]");
+    if (!reveal || !warning || !value || !copyBtn) return;
+    warning.textContent = warningText;
+    value.textContent = plaintext;
+    reveal.hidden = false;
+    copyBtn.textContent = "Copy";
+    copyBtn.classList.remove("rsm-btn-copied");
+    copyBtn.onclick = (): void => {
+      void this.copyToClipboard(plaintext, copyBtn);
+    };
   }
 
   private async createOperator(
@@ -476,21 +531,10 @@ class AdminApp {
           method: "POST",
           body: JSON.stringify({ username, password, ...(label ? { label } : {}) }),
         });
-        const reveal = $<HTMLElement>("[data-rsm-operator-reveal]");
-        const warning = $<HTMLElement>("[data-rsm-operator-reveal-warning]");
-        const value = $<HTMLElement>("[data-rsm-operator-reveal-value]");
-        const copyBtn = $<HTMLButtonElement>("[data-rsm-operator-copy]");
-        const plaintext = `${username} / ${password}`;
-        if (reveal && warning && value && copyBtn) {
-          warning.textContent = "Operator created. Copy the credentials now and share them privately — the password is not shown again.";
-          value.textContent = plaintext;
-          reveal.hidden = false;
-          copyBtn.textContent = "Copy";
-          copyBtn.classList.remove("rsm-btn-copied");
-          copyBtn.onclick = (): void => {
-            void this.copyToClipboard(plaintext, copyBtn);
-          };
-        }
+        this.revealOperatorCredentials(
+          `${username} / ${password}`,
+          "Operator created. Copy the credentials now and share them privately — the password is not shown again.",
+        );
         const form = $<HTMLFormElement>('[data-rsm-form="new-operator"]');
         form?.reset();
         await this.refreshOperators();

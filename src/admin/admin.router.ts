@@ -204,6 +204,24 @@ const createOperatorSchema = z.object({
   label: z.string().trim().min(1).max(120).optional(),
 });
 
+const resetOperatorPasswordSchema = z.object({
+  password: z.string().min(12).max(100).optional(),
+});
+
+const RESET_PASSWORD_LENGTH = 20;
+const RESET_PASSWORD_ALPHABET =
+  "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+
+function generateRandomPassword(length: number = RESET_PASSWORD_LENGTH): string {
+  const bytes = new Uint32Array(length);
+  globalThis.crypto.getRandomValues(bytes);
+  let out = "";
+  for (let i = 0; i < length; i += 1) {
+    out += RESET_PASSWORD_ALPHABET[bytes[i]! % RESET_PASSWORD_ALPHABET.length];
+  }
+  return out;
+}
+
 function viewOperator(op: OperatorDoc): Record<string, unknown> {
   return {
     username: op.username,
@@ -241,8 +259,13 @@ export function createAdminRouter(): Router {
   const router = Router();
   router.use(attachOperator);
 
-  router.get("/admin/login", (_req, res) => {
+  function sendAdminShell(res: Response): void {
+    res.set("Cache-Control", "no-store, must-revalidate");
     res.sendFile(path.resolve(process.cwd(), "public", "admin.html"));
+  }
+
+  router.get("/admin/login", (_req, res) => {
+    sendAdminShell(res);
   });
 
   router.get("/admin", (req, res) => {
@@ -254,11 +277,11 @@ export function createAdminRouter(): Router {
   });
 
   router.get("/admin/dashboard", requireOperator("redirect"), (_req, res) => {
-    res.sendFile(path.resolve(process.cwd(), "public", "admin.html"));
+    sendAdminShell(res);
   });
 
-  router.get("/admin/release-notes", requireOperator("redirect"), (_req, res) => {
-    res.sendFile(path.resolve(process.cwd(), "public", "admin.html"));
+  router.get("/admin/release-notes", (_req, res) => {
+    sendAdminShell(res);
   });
 
   router.post(
@@ -594,6 +617,37 @@ export function createAdminRouter(): Router {
     }),
   );
 
+  router.post(
+    "/admin/api/operators/:username/password",
+    requireOperator(),
+    requireRoot,
+    asyncHandler(async (req: Request, res: Response) => {
+      const username = (req.params["username"] ?? "").trim().toLowerCase();
+      if (!username) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: "Username required" } });
+        return;
+      }
+      const parsed = resetOperatorPasswordSchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: parsed.error.message } });
+        return;
+      }
+      const target = await Operator.findOne({ username }).exec();
+      if (!target) {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: "Operator not found" } });
+        return;
+      }
+      const password = parsed.data.password ?? generateRandomPassword();
+      target.passwordHash = await hashPassword(password);
+      await target.save();
+      res.json({
+        username: target.username,
+        password,
+        warning: "This is the only time the new password will be shown. Copy it now and share it privately.",
+      });
+    }),
+  );
+
   router.get(
     "/admin/api/version",
     asyncHandler(async (_req: Request, res: Response) => {
@@ -604,7 +658,6 @@ export function createAdminRouter(): Router {
 
   router.get(
     "/admin/api/release-notes",
-    requireOperator(),
     asyncHandler(async (_req: Request, res: Response) => {
       const info = await loadBuildInfo();
       res.json({ entries: info.entries });

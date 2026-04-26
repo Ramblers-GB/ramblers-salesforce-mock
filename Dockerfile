@@ -1,8 +1,5 @@
 FROM node:20-alpine AS build
 WORKDIR /app
-# git is needed at build time so `npm run build:release-notes` can snapshot
-# git log into dist/build-info.json. The runtime image does not need git.
-RUN apk add --no-cache git
 COPY package.json package-lock.json* ./
 RUN npm ci
 COPY tsconfig.json eslint.config.mjs ./
@@ -13,10 +10,12 @@ COPY schema ./schema
 # adds admin.js/.map. The runtime stage picks up the populated directory via
 # `COPY --from=build`.
 COPY public ./public
-# .git is required only by the release-notes build step. If a CI build doesn't
-# include it, the script falls back to an empty entries array.
-COPY .git ./.git
 RUN npm run build
+# Release notes are baked on the host by `npm run predeploy` (full git
+# history) and shipped in via the build context. Fly's remote builder
+# receives a shallow .git, so generating them inside this stage would
+# yield only the latest commit.
+COPY dist/build-info.json ./dist/build-info.json
 
 FROM node:20-alpine AS runtime
 WORKDIR /app
