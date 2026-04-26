@@ -126,6 +126,25 @@ export async function parseExportAll(buffer: Buffer): Promise<ParseResult> {
   return { rowCount, members, unmatchedHeaders, missingHeaders, warnings };
 }
 
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+const TWO_DIGIT_YEAR_API_KEYS = new Set<string>([
+  "membershipExpiryDate",
+  "areaJoinedDate",
+]);
+
+function formatInsightHubDate(d: Date, apiKey: string): string {
+  const dd = pad2(d.getUTCDate());
+  const mm = pad2(d.getUTCMonth() + 1);
+  const yyyy = String(d.getUTCFullYear());
+  if (TWO_DIGIT_YEAR_API_KEYS.has(apiKey)) {
+    return `${dd}/${mm}/${yyyy.slice(-2)}`;
+  }
+  return `${dd}/${mm}/${yyyy}`;
+}
+
 /** Build a Buffer containing a valid ExportAll workbook from in-memory rows. */
 export async function writeExportAll(
   members: ReadonlyArray<Record<string, unknown>>,
@@ -147,7 +166,7 @@ export async function writeExportAll(
       const v = m[col.apiKey];
       if (v === undefined || v === null) continue;
       if (v instanceof Date) {
-        rowValues[col.apiKey] = v;
+        rowValues[col.apiKey] = formatInsightHubDate(v, col.apiKey);
       } else if (typeof v === "boolean") {
         rowValues[col.apiKey] = v ? "Yes" : "No";
       } else {
