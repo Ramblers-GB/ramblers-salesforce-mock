@@ -119,6 +119,7 @@
           <button type="submit" class="rsm-btn rsm-btn-primary">Create</button>
         </div>
       </form>
+      <pre class="rsm-ingest-error" data-rsm-tenant-error hidden></pre>
     </aside>
 
     <section class="rsm-detail" data-rsm-detail hidden>
@@ -148,6 +149,7 @@
             <button type="button" class="rsm-btn rsm-btn-small rsm-btn-copy" data-rsm-token-copy>Copy</button>
           </div>
         </div>
+        <pre class="rsm-ingest-error" data-rsm-token-error hidden></pre>
         <table class="rsm-table" data-rsm-token-table>
           <thead><tr><th>Prefix</th><th>Label</th><th>Created</th><th>Last used</th><th></th></tr></thead>
           <tbody></tbody>
@@ -195,8 +197,6 @@
           <fieldset class="rsm-fieldset">
             <legend>Email pattern</legend>
             <p class="rsm-muted rsm-fieldset-help">
-              Placeholders: <code>{firstname}</code> <code>{surname}</code> <code>{nn}</code>
-              <code>{membershipNumber}</code> <code>{groupCode}</code> <code>{domain}</code> <code>{base}</code>.
               Default domain <code>ngx-ramblers.org.uk</code> is unreachable from real Brevo lists.
             </p>
             <div class="rsm-preset-list" data-rsm-email-presets>
@@ -225,9 +225,10 @@
                 <span class="rsm-preset-main">
                   <input type="radio" name="emailPreset" value="custom" />
                   <span class="rsm-preset-custom-label">Custom</span>
-                  <input type="text" name="emailTemplate" placeholder="{firstname}-{surname}@{domain}" />
+                  <input type="text" name="emailTemplate" placeholder="{firstname}-{surname}@{domain}" autocomplete="off" data-1p-ignore data-lpignore="true" data-form-type="other" />
                 </span>
-                <span class="rsm-preset-help">build your own from any of the placeholders above</span>
+                <span class="rsm-preset-help">click a chip to insert a placeholder at the caret</span>
+                <div class="rsm-placeholder-chips" data-rsm-placeholder-chips></div>
               </label>
             </div>
             <div class="rsm-field-row">
@@ -356,7 +357,12 @@
 
       <div class="rsm-detail-tab-panel" data-rsm-detail-panel="members">
       <article class="rsm-panel">
-        <h3>Members <small class="rsm-muted">(first 20)</small></h3>
+        <header class="rsm-panel-head">
+          <h3>Members <small class="rsm-muted">(first 20)</small></h3>
+          <button type="button" class="rsm-btn rsm-btn-small rsm-btn-danger" data-rsm-btn="clear-members">Clear members</button>
+        </header>
+        <pre class="rsm-ingest-error" data-rsm-clear-error hidden></pre>
+        <p class="rsm-muted" data-rsm-clear-result hidden></p>
         <table class="rsm-table" data-rsm-members-table>
           <thead><tr><th>Mem No.</th><th>Name</th><th>Email</th><th>Email consent</th></tr></thead>
           <tbody></tbody>

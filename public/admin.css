@@ -153,6 +153,44 @@ a:hover { color: var(--rsm-mintcake-hover); }
   background: transparent; color: var(--rsm-sunset); border-color: var(--rsm-rosycheeks);
 }
 .rsm-btn-danger:hover { background: rgba(240,128,80,0.1); }
+.rsm-btn-armed {
+  background: var(--rsm-sunset); color: #fff; border-color: var(--rsm-sunset);
+}
+.rsm-btn-armed:hover { background: var(--rsm-sunset); border-color: var(--rsm-sunset); filter: brightness(0.95); }
+
+.rsm-panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin: 0 0 12px;
+}
+.rsm-panel-head h3 { margin: 0; }
+
+.rsm-placeholder-chips {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 8px;
+}
+.rsm-chip-btn {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--rsm-border);
+  border-radius: 999px;
+  background: var(--rsm-panel);
+  color: var(--rsm-granite);
+  font: inherit; font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.rsm-chip-btn:hover {
+  background: var(--rsm-mintcake-light);
+  border-color: var(--rsm-mintcake);
+}
+.rsm-chip-btn code {
+  font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  font-size: 0.85rem;
+}
+.rsm-chip-btn .rsm-chip-eg {
+  color: var(--rsm-muted);
+  font-size: 0.78rem;
+}
 .rsm-btn[disabled], .rsm-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .rsm-btn[disabled]:hover, .rsm-btn:disabled:hover { background: inherit; border-color: inherit; }
 

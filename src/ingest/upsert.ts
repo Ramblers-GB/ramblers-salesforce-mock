@@ -19,6 +19,18 @@ export interface UpsertResult {
   tenantCode: string;
 }
 
+function pairConsentWithDate(m: ParsedMember, fallback: Date): ParsedMember {
+  return {
+    ...m,
+    ...(m.emailMarketingConsent && !m.emailPermissionLastUpdated
+      ? { emailPermissionLastUpdated: fallback } : {}),
+    ...(m.postDirectMarketing && !m.postPermissionLastUpdated
+      ? { postPermissionLastUpdated: fallback } : {}),
+    ...(m.telephoneDirectMarketing && !m.telephonePermissionLastUpdated
+      ? { telephonePermissionLastUpdated: fallback } : {}),
+  };
+}
+
 export async function upsertMembers(
   tenantCode: string,
   parsed: ReadonlyArray<ParsedMember>,
@@ -34,7 +46,8 @@ export async function upsertMembers(
   let upserted = 0;
   let updated = 0;
 
-  for (const m of parsed) {
+  for (const raw of parsed) {
+    const m = pairConsentWithDate(raw, now);
     const { salesforceId } = m;
     // `ingestedAt` goes in $setOnInsert only so the first-seen timestamp is
     // preserved across re-ingests. Every other field is in $set. Having any

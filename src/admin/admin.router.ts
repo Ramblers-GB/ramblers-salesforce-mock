@@ -582,6 +582,24 @@ export function createAdminRouter(): Router {
   );
 
   router.post(
+    "/admin/api/tenants/:code/clear",
+    requireOperator(),
+    asyncHandler(async (req: Request, res: Response) => {
+      const tenant = await assertOwnsTenant(req.params["code"]!, req.operator!);
+      const now = new Date();
+      const result = await Member.updateMany(
+        { tenantCode: tenant.code, removed: { $ne: true } },
+        { $set: { removed: true, removalReason: "other", updatedAt: now } },
+      );
+      await Tenant.updateOne(
+        { _id: tenant._id },
+        { $set: { lastIngestAt: now, lastIngestCount: 0 } },
+      );
+      res.json({ tenantCode: tenant.code, cleared: result.modifiedCount });
+    }),
+  );
+
+  router.post(
     "/admin/api/operators",
     requireOperator(),
     requireRoot,

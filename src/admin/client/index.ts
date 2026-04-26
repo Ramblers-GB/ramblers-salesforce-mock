@@ -478,7 +478,11 @@ class AdminApp {
         const resetBtn = document.createElement("button");
         resetBtn.className = "rsm-btn rsm-btn-small rsm-btn-ghost";
         resetBtn.textContent = "Reset password";
-        resetBtn.addEventListener("click", () => void this.resetOperatorPassword(op.username));
+        resetBtn.addEventListener("click", () => {
+          this.armOrConfirm(resetBtn, "Click again to reset", "Reset password", () => {
+            void this.resetOperatorPassword(op.username);
+          });
+        });
         actions.appendChild(resetBtn);
         tbody.appendChild(tr);
       }
@@ -487,8 +491,31 @@ class AdminApp {
     }
   }
 
+  private armOrConfirm(
+    button: HTMLButtonElement,
+    confirmLabel: string,
+    originalLabel: string,
+    onConfirm: () => void,
+  ): void {
+    if (button.dataset["rsmArmed"] === "1") {
+      button.dataset["rsmArmed"] = "0";
+      button.classList.remove("rsm-btn-armed");
+      button.textContent = originalLabel;
+      onConfirm();
+      return;
+    }
+    button.dataset["rsmArmed"] = "1";
+    button.classList.add("rsm-btn-armed");
+    button.textContent = confirmLabel;
+    window.setTimeout(() => {
+      if (button.dataset["rsmArmed"] !== "1") return;
+      button.dataset["rsmArmed"] = "0";
+      button.classList.remove("rsm-btn-armed");
+      button.textContent = originalLabel;
+    }, 4000);
+  }
+
   private async resetOperatorPassword(username: string): Promise<void> {
-    if (!confirm(`Reset password for "${username}"? A new random password will be generated and shown once.`)) return;
     this.setOperatorError(null);
     await this.withBusy(async () => {
       try {
@@ -609,6 +636,7 @@ class AdminApp {
   }
 
   private async createTenant(code: string, kind: "group" | "area", name?: string): Promise<void> {
+    this.setTenantError(null);
     await this.withBusy(async () => {
       try {
         await jsonFetch<{ tenant: TenantView }>("/admin/api/tenants", {
@@ -619,7 +647,7 @@ class AdminApp {
         $<HTMLFormElement>('[data-rsm-form="new-tenant"]')!.hidden = true;
         await this.refreshTenants();
       } catch (err: unknown) {
-        alert(err instanceof Error ? err.message : String(err));
+        this.setTenantError(err instanceof Error ? err.message : String(err));
       }
     });
   }
@@ -645,6 +673,9 @@ class AdminApp {
     $<HTMLElement>("[data-rsm-token-reveal]")!.hidden = true;
     $<HTMLElement>("[data-rsm-ingest-result]")!.hidden = true;
     $<HTMLElement>("[data-rsm-ingest-error]")!.hidden = true;
+    this.setTokenError(null);
+    this.setClearError(null);
+    this.setClearResult(null);
 
     await Promise.all([this.refreshTokens(tenant), this.refreshMembers(tenant)]);
   }
@@ -681,6 +712,102 @@ class AdminApp {
         void this.exportInsightHub(tenant);
       };
     }
+
+    const clearBtn = $<HTMLButtonElement>('[data-rsm-btn="clear-members"]');
+    if (clearBtn) {
+      clearBtn.onclick = (): void => {
+        this.armOrConfirm(clearBtn, "Click again to clear", "Clear members", () => {
+          void this.clearTenantMembers(tenant);
+        });
+      };
+    }
+  }
+
+  private renderPlaceholderChips(genForm: HTMLFormElement, customInput: HTMLInputElement): void {
+    const host = genForm.querySelector<HTMLElement>("[data-rsm-placeholder-chips]");
+    if (!host) return;
+    const domainInput = genForm.querySelector<HTMLInputElement>('input[name="emailDomain"]');
+    const baseInput = genForm.querySelector<HTMLInputElement>('input[name="emailBase"]');
+    const chips: { token: string; example: () => string }[] = [
+      { token: "{firstname}",        example: (): string => "alice" },
+      { token: "{surname}",          example: (): string => "smith" },
+      { token: "{nn}",               example: (): string => "01" },
+      { token: "{membershipNumber}", example: (): string => "3000001" },
+      { token: "{groupCode}",        example: (): string => "KT50" },
+      { token: "{domain}",           example: (): string => domainInput?.value || "ngx-ramblers.org.uk" },
+      { token: "{base}",             example: (): string => baseInput?.value || "test" },
+    ];
+    host.innerHTML = "";
+    for (const chip of chips) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "rsm-chip-btn";
+      btn.dataset["rsmPlaceholder"] = chip.token;
+      btn.innerHTML = `<code>${escapeHtml(chip.token)}</code><span class="rsm-chip-eg">${escapeHtml(chip.example())}</span>`;
+      btn.addEventListener("click", () => {
+        this.insertAtCaret(customInput, chip.token);
+      });
+      host.appendChild(btn);
+    }
+    const refreshExamples = (): void => {
+      for (const btn of $$<HTMLButtonElement>("[data-rsm-placeholder]", host)) {
+        const token = btn.dataset["rsmPlaceholder"]!;
+        const chip = chips.find((c) => c.token === token);
+        if (!chip) continue;
+        const eg = btn.querySelector<HTMLElement>(".rsm-chip-eg");
+        if (eg) eg.textContent = chip.example();
+      }
+    };
+    domainInput?.addEventListener("input", refreshExamples);
+    baseInput?.addEventListener("input", refreshExamples);
+  }
+
+  private insertAtCaret(input: HTMLInputElement, text: string): void {
+    const customRadio = $<HTMLInputElement>('input[name="emailPreset"][value="custom"]');
+    if (customRadio && !customRadio.checked) {
+      customRadio.checked = true;
+      customRadio.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    input.focus();
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    const before = input.value.slice(0, start);
+    const after = input.value.slice(end);
+    input.value = `${before}${text}${after}`;
+    const caret = start + text.length;
+    input.setSelectionRange(caret, caret);
+  }
+
+  private async clearTenantMembers(tenant: TenantView): Promise<void> {
+    this.setClearError(null);
+    this.setClearResult(null);
+    await this.withBusy(async () => {
+      try {
+        const result = await jsonFetch<{ tenantCode: string; cleared: number }>(
+          `/admin/api/tenants/${encodeURIComponent(tenant.code)}/clear`,
+          { method: "POST" },
+        );
+        this.setClearResult(`Cleared ${result.cleared} member${result.cleared === 1 ? "" : "s"} from ${result.tenantCode}.`);
+        await this.refreshTenants();
+        await this.refreshMembers(tenant);
+      } catch (err: unknown) {
+        this.setClearError(err instanceof Error ? err.message : String(err));
+      }
+    });
+  }
+
+  private setClearError(message: string | null): void {
+    const el = $<HTMLElement>("[data-rsm-clear-error]");
+    if (!el) return;
+    if (!message) { el.hidden = true; el.textContent = ""; }
+    else { el.hidden = false; el.textContent = message; }
+  }
+
+  private setClearResult(message: string | null): void {
+    const el = $<HTMLElement>("[data-rsm-clear-result]");
+    if (!el) return;
+    if (!message) { el.hidden = true; el.textContent = ""; }
+    else { el.hidden = false; el.textContent = message; }
   }
 
   private bindGenerateForm(genForm: HTMLFormElement, tenant: TenantView): void {
@@ -725,6 +852,10 @@ class AdminApp {
       radio.addEventListener("change", updatePresetUI);
     }
     updatePresetUI();
+
+    if (customInput) {
+      this.renderPlaceholderChips(genForm, customInput);
+    }
 
     // Consent mode toggle.
     const indepBlock = genForm.querySelector<HTMLElement>("[data-rsm-consent-independent]");
@@ -923,7 +1054,11 @@ class AdminApp {
         const btn = document.createElement("button");
         btn.className = "rsm-btn rsm-btn-small rsm-btn-danger";
         btn.textContent = "Revoke";
-        btn.addEventListener("click", () => void this.revokeToken(tenant, t));
+        btn.addEventListener("click", () => {
+          this.armOrConfirm(btn, "Click again to revoke", "Revoke", () => {
+            void this.revokeToken(tenant, t);
+          });
+        });
         actions.appendChild(btn);
       }
       tbody.appendChild(tr);
@@ -931,6 +1066,7 @@ class AdminApp {
   }
 
   private async generateTokenFor(tenant: TenantView, label: string): Promise<void> {
+    this.setTokenError(null);
     await this.withBusy(async () => {
       try {
         const body = await jsonFetch<GeneratedToken>(
@@ -955,7 +1091,7 @@ class AdminApp {
         generateForm?.reset();
         await this.refreshTokens(tenant);
       } catch (err: unknown) {
-        alert(err instanceof Error ? err.message : String(err));
+        this.setTokenError(err instanceof Error ? err.message : String(err));
       }
     });
   }
@@ -978,14 +1114,42 @@ class AdminApp {
   }
 
   private async revokeToken(tenant: TenantView, token: TokenView): Promise<void> {
-    if (!confirm(`Revoke token "${token.label}"? This cannot be undone.`)) return;
+    this.setTokenError(null);
     await this.withBusy(async () => {
-      await jsonFetch<{ revoked: boolean }>(
-        `/admin/api/tenants/${encodeURIComponent(tenant.code)}/tokens/${token.id}/revoke`,
-        { method: "POST" },
-      );
-      await this.refreshTokens(tenant);
+      try {
+        await jsonFetch<{ revoked: boolean }>(
+          `/admin/api/tenants/${encodeURIComponent(tenant.code)}/tokens/${token.id}/revoke`,
+          { method: "POST" },
+        );
+        await this.refreshTokens(tenant);
+      } catch (err: unknown) {
+        this.setTokenError(err instanceof Error ? err.message : String(err));
+      }
     });
+  }
+
+  private setTenantError(message: string | null): void {
+    const el = $<HTMLElement>("[data-rsm-tenant-error]");
+    if (!el) return;
+    if (!message) {
+      el.hidden = true;
+      el.textContent = "";
+    } else {
+      el.hidden = false;
+      el.textContent = message;
+    }
+  }
+
+  private setTokenError(message: string | null): void {
+    const el = $<HTMLElement>("[data-rsm-token-error]");
+    if (!el) return;
+    if (!message) {
+      el.hidden = true;
+      el.textContent = "";
+    } else {
+      el.hidden = false;
+      el.textContent = message;
+    }
   }
 
   private async uploadXlsx(tenant: TenantView, file: File): Promise<void> {

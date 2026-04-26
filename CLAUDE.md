@@ -47,7 +47,7 @@
 
 - **Conventional commits**: `<type>(<scope>): <description>` (feat, fix, refactor, test, docs, style, build, ci)
 - **Commit message style**: paragraph-style body explaining the root cause and supporting fixes; no bullet-only summaries; no AI attribution trailers
-- **Trunk-based development** — all work directly on `main`. Never create branches or worktrees unilaterally
+- **100% trunk-based — no PRs, no branches, no worktrees.** All work goes directly on `main` as plain commits to `origin/main`. Never run `git checkout -b`, never run `gh pr create`, never use a worktree unilaterally. Issues are the unit of work — reference them on the subject line as `(#N)`; multiple related fixes belong in one commit, not a stack
 - **No literal `\n`** in commit messages — use real newlines or multiple `-m` flags
 - **Hook setup**: `npm run setup:hooks` (one-off, sets `core.hooksPath` to `.githooks/`). The hooks enforce no-AI-attribution on `commit-msg`, lint on `pre-commit`, and lint/typecheck/test on `pre-push`
 
