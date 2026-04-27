@@ -6,7 +6,6 @@ RUN pnpm install --frozen-lockfile
 COPY tsconfig.json eslint.config.mjs vite.config.ts ./
 COPY src ./src
 COPY scripts ./scripts
-COPY schema ./schema
 COPY public ./public
 RUN pnpm run build
 COPY dist/build-info.json ./dist/build-info.json
@@ -19,7 +18,6 @@ COPY package.json pnpm-lock.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile --prod && pnpm store prune
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/public ./public
-COPY --from=build /app/schema ./schema
 RUN addgroup -S app && adduser -S app -G app && chown -R app:app /app
 USER app
 EXPOSE 8080
