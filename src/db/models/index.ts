@@ -10,9 +10,9 @@ export type { TokenAttrs, TokenDoc, TokenModel } from "./token.model.js";
 export { Member } from "./member.model.js";
 export type { MemberAttrs, MemberDoc, MemberModel } from "./member.model.js";
 
-export { ConsentEvent } from "./consentEvent.model.js";
+export { ConsentEvent } from "./consent-event.model.js";
 export type {
   ConsentEventAttrs,
   ConsentEventDoc,
   ConsentEventModel,
-} from "./consentEvent.model.js";
+} from "./consent-event.model.js";

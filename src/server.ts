@@ -13,6 +13,7 @@ import { createApiRouter } from "./api/members.router.js";
 import { getOpenApiDocument } from "./api/openapi.js";
 import { createAdminRouter } from "./admin/admin.router.js";
 import { seedRootOperator } from "./admin/seed.js";
+import { MockMemberProvider } from "./providers/mock-member-provider.js";
 
 const config = loadConfig();
 
@@ -68,7 +69,7 @@ export async function createApp(): Promise<express.Express> {
     },
   }));
 
-  app.use(createApiRouter());
+  app.use(createApiRouter(new MockMemberProvider()));
   app.use(createAdminRouter());
 
   app.use(express.static(publicDir, { index: false }));

@@ -9,7 +9,7 @@
  * upserting the new rows.
  */
 import { Member, Tenant } from "../db/models/index.js";
-import type { ParsedMember } from "./xlsxParser.js";
+import type { ParsedMember } from "./xlsx-parser.js";
 import { logger } from "../logger.js";
 
 export interface UpsertResult {

@@ -105,13 +105,13 @@ async function loadBuildInfo(): Promise<BuildInfo> {
 }
 import { Operator, Tenant, ApiToken, Member } from "../db/models/index.js";
 import type { OperatorDoc, TenantDoc } from "../db/models/index.js";
-import { asyncHandler } from "../api/asyncHandler.js";
+import { asyncHandler } from "../api/async-handler.js";
 import { attachOperator, requireOperator, requireRoot } from "./session.js";
 import { hashPassword, verifyPassword, timingSafeEqual } from "./passwords.js";
 import { loadConfig } from "../config.js";
 import { logger } from "../logger.js";
 import { generateToken } from "../auth/tokens.js";
-import { parseExportAll, writeExportAll } from "../ingest/xlsxParser.js";
+import { parseExportAll, writeExportAll } from "../ingest/xlsx-parser.js";
 import { generateSyntheticMembers } from "../ingest/synthetic.js";
 import type {
   ConsentDistribution,
@@ -119,7 +119,7 @@ import type {
   SyntheticOptions,
 } from "../ingest/synthetic.js";
 import { upsertMembers } from "../ingest/upsert.js";
-import { toSalesforceMember } from "../api/memberMapper.js";
+import { toSalesforceMember } from "../api/member-mapper.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),

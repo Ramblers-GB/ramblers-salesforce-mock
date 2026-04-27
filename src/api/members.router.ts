@@ -1,17 +1,11 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { z } from "zod";
-import { Member, ConsentEvent, Tenant } from "../db/models/index.js";
-import type { MemberDoc } from "../db/models/index.js";
-import { bearerAuth, requireTenantMatch } from "../auth/bearerAuth.js";
-import { toSalesforceMember } from "./memberMapper.js";
+import { bearerAuth, requireTenantMatch } from "../auth/bearer-auth.js";
 import { apiError } from "./errors.js";
-import { asyncHandler } from "./asyncHandler.js";
-import type {
-  ConsentUpdateResponse,
-  MemberChange,
-  MemberListResponse,
-} from "../domain/types.js";
+import { asyncHandler } from "./async-handler.js";
+import type { ConsentUpdateRequest } from "../domain/types.js";
+import type { MemberProvider } from "../ports/member-provider.js";
 
 const listQuerySchema = z.object({
   since: z
@@ -43,7 +37,7 @@ const consentRequestSchema = z
     { message: "At least one consent flag must be present" },
   );
 
-export function createApiRouter(): Router {
+export function createApiRouter(provider: MemberProvider): Router {
   const router = Router();
 
   router.get(
@@ -66,62 +60,18 @@ export function createApiRouter(): Router {
       }
       const { since, includeExpired } = parsed.data;
 
-      const tenant = await Tenant.findOne({ code: pathTenant.toUpperCase() }).exec();
-      if (!tenant) {
+      const result = await provider.listMembers({
+        groupCode: pathTenant,
+        ...(since ? { since: new Date(since) } : {}),
+        ...(includeExpired !== undefined ? { includeExpired } : {}),
+      });
+
+      if (result.kind === "groupNotFound") {
         apiError(res, "GROUP_NOT_FOUND", `No data loaded for ${pathTenant}`);
         return;
       }
 
-      const memberFilter: Record<string, unknown> = {
-        tenantCode: pathTenant.toUpperCase(),
-      };
-      if (!includeExpired) {
-        memberFilter["$or"] = [
-          { membershipExpiryDate: { $exists: false } },
-          { membershipExpiryDate: { $gte: new Date() } },
-        ];
-      }
-      if (!since) {
-        memberFilter["removed"] = { $ne: true };
-      }
-
-      const docs = await Member.find(memberFilter).exec();
-      const members = docs
-        .filter((d: MemberDoc) => !d.removed)
-        .map((d) => toSalesforceMember(d));
-
-      const response: MemberListResponse = {
-        groupCode: pathTenant.toUpperCase(),
-        groupName: tenant.name ?? tenant.code,
-        totalCount: members.length,
-        members,
-      };
-
-      if (since) {
-        const sinceDate = new Date(since);
-        const changed = docs.filter((d) => d.updatedAt >= sinceDate);
-        const changes: MemberChange[] = changed.map((d) => {
-          if (d.removed) {
-            const change: MemberChange = {
-              member: toSalesforceMember(d),
-              changeType: "removed",
-              changedAt: d.updatedAt.toISOString(),
-            };
-            if (d.removalReason) change.removalReason = d.removalReason;
-            return change;
-          }
-          const isNew = d.ingestedAt >= sinceDate;
-          return {
-            member: toSalesforceMember(d),
-            changeType: isNew ? "added" : "updated",
-            changedAt: d.updatedAt.toISOString(),
-          };
-        });
-        response.since = sinceDate.toISOString();
-        response.changes = changes;
-      }
-
-      res.json(response);
+      res.json(result.response);
     }),
   );
 
@@ -147,58 +97,11 @@ export function createApiRouter(): Router {
         });
         return;
       }
+
       const body = parsed.data;
-
-      const member = await Member.findOne({
-        tenantCode: token.tenantCode,
-        membershipNumber,
-      }).exec();
-      if (!member) {
-        apiError(
-          res,
-          "MEMBER_NOT_FOUND",
-          `No member with membershipNumber ${membershipNumber} in tenant ${token.tenantCode}`,
-        );
-        return;
-      }
-
-      const now = new Date();
-      const updates: Partial<
-        Pick<
-          typeof member,
-          | "emailMarketingConsent"
-          | "groupMarketingConsent"
-          | "areaMarketingConsent"
-          | "otherMarketingConsent"
-          | "emailPermissionLastUpdated"
-          | "updatedAt"
-        >
-      > = { updatedAt: now };
-
-      if (body.emailMarketingConsent !== undefined) {
-        updates.emailMarketingConsent = body.emailMarketingConsent;
-        updates.emailPermissionLastUpdated = now;
-      }
-      if (body.groupMarketingConsent !== undefined) {
-        updates.groupMarketingConsent = body.groupMarketingConsent;
-      }
-      if (body.areaMarketingConsent !== undefined) {
-        updates.areaMarketingConsent = body.areaMarketingConsent;
-      }
-      if (body.otherMarketingConsent !== undefined) {
-        updates.otherMarketingConsent = body.otherMarketingConsent;
-      }
-
-      Object.assign(member, updates);
-      await member.save();
-
-      const eventDoc = {
-        tenantCode: token.tenantCode,
-        membershipNumber,
+      const consentRequest: ConsentUpdateRequest = {
         source: body.source,
-        submittedAt: new Date(body.timestamp),
-        appliedAt: now,
-        ...(body.reason !== undefined ? { reason: body.reason } : {}),
+        timestamp: body.timestamp,
         ...(body.emailMarketingConsent !== undefined
           ? { emailMarketingConsent: body.emailMarketingConsent }
           : {}),
@@ -211,28 +114,26 @@ export function createApiRouter(): Router {
         ...(body.otherMarketingConsent !== undefined
           ? { otherMarketingConsent: body.otherMarketingConsent }
           : {}),
+        ...(body.reason !== undefined ? { reason: body.reason } : {}),
       };
-      await ConsentEvent.create(eventDoc);
 
-      const response: ConsentUpdateResponse = {
+      const result = await provider.applyConsent({
+        tenantCode: token.tenantCode,
         membershipNumber,
-        updatedAt: now.toISOString(),
-        success: true,
-      };
-      if (member.emailMarketingConsent !== undefined) {
-        response.emailMarketingConsent = member.emailMarketingConsent;
-      }
-      if (member.groupMarketingConsent !== undefined) {
-        response.groupMarketingConsent = member.groupMarketingConsent;
-      }
-      if (member.areaMarketingConsent !== undefined) {
-        response.areaMarketingConsent = member.areaMarketingConsent;
-      }
-      if (member.otherMarketingConsent !== undefined) {
-        response.otherMarketingConsent = member.otherMarketingConsent;
+        request: consentRequest,
+        appliedAt: new Date(),
+      });
+
+      if (result.kind === "memberNotFound") {
+        apiError(
+          res,
+          "MEMBER_NOT_FOUND",
+          `No member with membershipNumber ${membershipNumber} in tenant ${token.tenantCode}`,
+        );
+        return;
       }
 
-      res.status(200).json(response);
+      res.status(200).json(result.response);
     }),
   );
 

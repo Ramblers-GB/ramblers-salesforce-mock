@@ -6,7 +6,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { Operator } from "../db/models/index.js";
 import type { OperatorDoc } from "../db/models/index.js";
-import { asyncHandler } from "../api/asyncHandler.js";
+import { asyncHandler } from "../api/async-handler.js";
 
 declare module "express-session" {
   interface SessionData {

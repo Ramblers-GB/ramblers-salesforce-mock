@@ -12,7 +12,7 @@
  * Hub columns and would be lost going through xlsx.
  */
 import { randomInt } from "node:crypto";
-import type { ParsedMember } from "./xlsxParser.js";
+import type { ParsedMember } from "./xlsx-parser.js";
 
 const FIRST_NAMES = [
   "Alice", "Amelia", "Aoife", "Beatrice", "Benjamin", "Bethany", "Callum",
