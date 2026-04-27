@@ -10,7 +10,7 @@ import type {
   GroupMembership,
   MemberTerm,
   RemovalReason,
-} from "../../domain/types.js";
+} from "@ramblers/sf-contract";
 
 export interface MemberAttrs {
   tenantCode: string;

@@ -1,41 +1,14 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { z } from "zod";
+import {
+  consentUpdateRequestSchema,
+  listMembersQuerySchema,
+  type ConsentUpdateRequest,
+} from "@ramblers/sf-contract";
 import { bearerAuth, requireTenantMatch } from "../auth/bearer-auth.js";
 import { apiError } from "./errors.js";
 import { asyncHandler } from "./async-handler.js";
-import type { ConsentUpdateRequest } from "../domain/types.js";
 import type { MemberProvider } from "../ports/member-provider.js";
-
-const listQuerySchema = z.object({
-  since: z
-    .string()
-    .datetime({ offset: true })
-    .optional(),
-  includeExpired: z
-    .string()
-    .optional()
-    .transform((v) => v === undefined ? undefined : v === "true" || v === "1"),
-});
-
-const consentRequestSchema = z
-  .object({
-    emailMarketingConsent: z.boolean().optional(),
-    groupMarketingConsent: z.boolean().optional(),
-    areaMarketingConsent: z.boolean().optional(),
-    otherMarketingConsent: z.boolean().optional(),
-    source: z.enum(["ngx-ramblers", "mailman"]),
-    timestamp: z.string().datetime({ offset: true }),
-    reason: z.string().optional(),
-  })
-  .refine(
-    (body) =>
-      body.emailMarketingConsent !== undefined ||
-      body.groupMarketingConsent !== undefined ||
-      body.areaMarketingConsent !== undefined ||
-      body.otherMarketingConsent !== undefined,
-    { message: "At least one consent flag must be present" },
-  );
 
 export function createApiRouter(provider: MemberProvider): Router {
   const router = Router();
@@ -51,7 +24,7 @@ export function createApiRouter(provider: MemberProvider): Router {
       }
       if (!requireTenantMatch(pathTenant, req, res)) return;
 
-      const parsed = listQuerySchema.safeParse(req.query);
+      const parsed = listMembersQuerySchema.safeParse(req.query);
       if (!parsed.success) {
         apiError(res, "BAD_REQUEST", "Invalid query parameters", {
           issues: parsed.error.issues,
@@ -90,7 +63,7 @@ export function createApiRouter(provider: MemberProvider): Router {
         return;
       }
 
-      const parsed = consentRequestSchema.safeParse(req.body);
+      const parsed = consentUpdateRequestSchema.safeParse(req.body);
       if (!parsed.success) {
         apiError(res, "BAD_REQUEST", "Invalid consent request body", {
           issues: parsed.error.issues,

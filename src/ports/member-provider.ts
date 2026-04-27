@@ -2,7 +2,7 @@ import type {
   ConsentUpdateRequest,
   ConsentUpdateResponse,
   MemberListResponse,
-} from "../domain/types.js";
+} from "@ramblers/sf-contract";
 
 export interface ListMembersOptions {
   groupCode: string;

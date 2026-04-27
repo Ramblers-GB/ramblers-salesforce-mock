@@ -1,6 +1,6 @@
 import { Schema, model } from "mongoose";
 import type { HydratedDocument, Model } from "mongoose";
-import type { ConsentSource } from "../../domain/types.js";
+import type { ConsentSource } from "@ramblers/sf-contract";
 
 export interface ConsentEventAttrs {
   tenantCode: string;

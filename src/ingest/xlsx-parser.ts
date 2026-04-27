@@ -1,7 +1,7 @@
 import ExcelJS from "exceljs";
 import type { CellValue } from "exceljs";
-import { findColumn, INSIGHT_HUB_COLUMNS } from "./columns.js";
-import type { ColumnDef } from "./columns.js";
+import { findColumn, INSIGHT_HUB_COLUMNS } from "@ramblers/sf-contract";
+import type { ColumnDef } from "@ramblers/sf-contract";
 import { parseCell } from "./parse.js";
 import type { RawCell } from "./parse.js";
 import type { MemberAttrs } from "../db/models/index.js";

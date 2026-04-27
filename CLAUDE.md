@@ -95,7 +95,6 @@ pnpm start                 # run dist/server.js
 pnpm typecheck             # tsc --noEmit
 pnpm lint                  # eslint src/ scripts/
 pnpm test                  # vitest run
-pnpm check:schema-drift    # detect drift between models and openapi
 pnpm setup:hooks           # one-off — activate .githooks/ for this clone
 ```
 
@@ -103,7 +102,8 @@ pnpm setup:hooks           # one-off — activate .githooks/ for this clone
 
 ## Mock-Specific Conventions
 
-- **Insight Hub xlsx contract**: `src/ingest/columns.ts` and `xlsx-parser.ts` mirror the real Insight Hub `ExportAll.xlsx` exactly — column order, header text, and the worksheet name (`Full List`) are authoritative for downstream consumers (especially ngx-ramblers' `member-bulk-load.ts`). Cross-check against the local archive at `/Users/nick/Documents/Ramblers/Ramblers-ngx-ramblers/ramblers/salesforce-integration/ExportAll.xlsx` when changing the column set
+- **Wire-format contract package**: this repo depends on `@ramblers/sf-contract` (separate repo at [nbarrett/ramblers-salesforce-contract](https://github.com/nbarrett/ramblers-salesforce-contract)) for TypeScript types, Zod schemas, the OpenAPI builder, the error envelope and the Insight Hub column definitions. Pin a `vX.Y.Z` tag in `package.json`. Wire-format changes go through that repo first; bump the tag here second.
+- **Insight Hub xlsx contract**: `INSIGHT_HUB_COLUMNS` (from `@ramblers/sf-contract`) and the local `src/ingest/xlsx-parser.ts` mirror the real Insight Hub `ExportAll.xlsx` exactly — column order, header text, and the worksheet name (`Full List`) are authoritative for downstream consumers (especially ngx-ramblers' `member-bulk-load.ts`). Cross-check against the local archive at `/Users/nick/Documents/Ramblers/Ramblers-ngx-ramblers/ramblers/salesforce-integration/ExportAll.xlsx` when changing the column set
 - **Synthetic data uniqueness**: consumers may enforce unique indexes on member fields (e.g. ngx-ramblers' `(lastName, firstName, nameAlias)`). The synthetic generator must produce data that imports cleanly into those collections
 - **Granular consent**: the three flags (`groupMarketingConsent`, `areaMarketingConsent`, `otherMarketingConsent`) are part of the API contract but not the Insight Hub xlsx contract. Direct ingest preserves them; xlsx round-trip drops them by design
 - **Tenant isolation**: every query must scope by `tenantCode`. `assertOwnsTenant` enforces operator-to-tenant binding for write paths

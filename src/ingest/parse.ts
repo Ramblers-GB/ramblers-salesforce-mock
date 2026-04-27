@@ -1,4 +1,4 @@
-import type { ParseKind } from "./columns.js";
+import type { ParseKind } from "@ramblers/sf-contract";
 
 /**
  * Coerce a raw cell value (exceljs gives us string | number | Date | boolean

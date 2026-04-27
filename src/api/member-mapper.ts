@@ -6,7 +6,7 @@
  * that rule; it also converts `Date` fields into ISO-8601 strings.
  */
 import type { MemberDoc } from "../db/models/index.js";
-import type { SalesforceMember } from "../domain/types.js";
+import type { SalesforceMember } from "@ramblers/sf-contract";
 
 function iso(date: Date | undefined): string | undefined {
   return date ? date.toISOString() : undefined;

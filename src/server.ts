@@ -58,7 +58,7 @@ export async function createApp(): Promise<express.Express> {
     });
   });
 
-  const openapi = await getOpenApiDocument();
+  const openapi = getOpenApiDocument();
   app.get("/api/openapi.json", (_req: Request, res: Response) => {
     res.json(openapi);
   });

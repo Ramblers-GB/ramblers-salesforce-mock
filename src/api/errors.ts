@@ -1,14 +1,9 @@
 import type { Response } from "express";
-import type { ApiErrorCode, ApiErrorResponse } from "../domain/types.js";
-
-const STATUS_BY_CODE: Record<ApiErrorCode, number> = {
-  UNAUTHORIZED: 401,
-  GROUP_NOT_FOUND: 404,
-  MEMBER_NOT_FOUND: 404,
-  BAD_REQUEST: 400,
-  RATE_LIMITED: 429,
-  INTERNAL_ERROR: 500,
-};
+import {
+  STATUS_BY_API_ERROR_CODE,
+  type ApiErrorCode,
+  type ApiErrorResponse,
+} from "@ramblers/sf-contract";
 
 export function apiError(
   res: Response,
@@ -20,5 +15,5 @@ export function apiError(
     error: details ? { code, message, details } : { code, message },
     timestamp: new Date().toISOString(),
   };
-  res.status(STATUS_BY_CODE[code]).json(body);
+  res.status(STATUS_BY_API_ERROR_CODE[code]).json(body);
 }

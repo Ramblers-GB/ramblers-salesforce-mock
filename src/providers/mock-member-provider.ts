@@ -5,7 +5,7 @@ import type {
   ConsentUpdateResponse,
   MemberChange,
   MemberListResponse,
-} from "../domain/types.js";
+} from "@ramblers/sf-contract";
 import type {
   ApplyConsentOptions,
   ApplyConsentResult,

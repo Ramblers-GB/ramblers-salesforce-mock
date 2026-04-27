@@ -21,7 +21,3 @@ jobs:
       - run: pnpm lint
       - run: pnpm build
       - run: pnpm test
-      - name: Schema drift check
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm check:schema-drift
