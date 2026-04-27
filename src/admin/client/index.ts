@@ -333,7 +333,7 @@ class AdminApp {
               <span class="rsm-release-sha">${escapeHtml(e.sha)}</span>
               <span class="rsm-release-date">${formatDate(e.date)}</span>
             </div>
-            <strong class="rsm-release-subject">${renderInlineCode(escapeHtml(e.subject))}</strong>
+            <strong class="rsm-release-subject">${linkifyIssueRefs(renderInlineCode(escapeHtml(e.subject)))}</strong>
             ${e.body ? `<div class="rsm-release-body">${renderCommitBody(e.body)}</div>` : ""}
           `;
           list.appendChild(li);
@@ -1322,9 +1322,17 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-/** Backtick-wrapped inline `code` -> <code>code</code>. Caller must pre-escape HTML. */
 function renderInlineCode(escapedText: string): string {
   return escapedText.replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+const ISSUE_REPO_URL = "https://github.com/nbarrett/ramblers-salesforce-mock/issues";
+
+function linkifyIssueRefs(escapedText: string): string {
+  return escapedText.replace(
+    /(^|[^\w/])#(\d+)\b/g,
+    `$1<a href="${ISSUE_REPO_URL}/$2" target="_blank" rel="noopener">#$2</a>`,
+  );
 }
 
 /**
@@ -1356,12 +1364,12 @@ function renderCommitBody(body: string): string {
         }
         if (current !== null) items.push(current);
         const html = items
-          .map((i) => `<li>${renderInlineCode(escapeHtml(i))}</li>`)
+          .map((i) => `<li>${linkifyIssueRefs(renderInlineCode(escapeHtml(i)))}</li>`)
           .join("");
         return `<ul>${html}</ul>`;
       }
       const collapsed = block.replace(/\n/g, " ");
-      return `<p>${renderInlineCode(escapeHtml(collapsed))}</p>`;
+      return `<p>${linkifyIssueRefs(renderInlineCode(escapeHtml(collapsed)))}</p>`;
     })
     .join("");
 }
