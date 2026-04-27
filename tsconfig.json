@@ -28,6 +28,6 @@
     "rootDir": ".",
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"],
+  "include": ["src/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts", "eslint.config.ts", "vite.config.ts"],
   "exclude": ["node_modules", "dist", "public/admin.js"]
 }

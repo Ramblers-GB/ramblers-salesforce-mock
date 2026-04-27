@@ -1,11 +1,10 @@
-import tseslint from "@typescript-eslint/eslint-plugin";
-import tsparser from "@typescript-eslint/parser";
+import tseslint from "typescript-eslint";
 
-export default [
+export default tseslint.config(
   {
     files: ["src/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"],
     languageOptions: {
-      parser: tsparser,
+      parser: tseslint.parser,
       parserOptions: {
         project: "./tsconfig.json",
         sourceType: "module",
@@ -13,7 +12,7 @@ export default [
       },
     },
     plugins: {
-      "@typescript-eslint": tseslint,
+      "@typescript-eslint": tseslint.plugin,
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "error",
@@ -28,6 +27,6 @@ export default [
     },
   },
   {
-    ignores: ["dist/**", "node_modules/**", "public/admin.js"],
+    ignores: ["dist/**", "node_modules/**", "public/admin.js", "eslint.config.ts"],
   },
-];
+);

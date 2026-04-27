@@ -25,6 +25,7 @@
     "setup:hooks": "bash tools/setup-git-hooks.sh"
   },
   "dependencies": {
+    "@ramblers/sf-contract": "github:nbarrett/ramblers-salesforce-contract#v0.1.0",
     "bcryptjs": "2.4.3",
     "cookie-parser": "1.4.7",
     "csrf-sync": "4.2.1",
@@ -36,8 +37,7 @@
     "pino": "9.14.0",
     "pino-http": "10.5.0",
     "swagger-ui-express": "5.0.1",
-    "zod": "3.25.76",
-    "@ramblers/sf-contract": "github:nbarrett/ramblers-salesforce-contract#v0.1.0"
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@types/bcryptjs": "2.4.6",
@@ -48,13 +48,13 @@
     "@types/node": "20.19.39",
     "@types/supertest": "6.0.3",
     "@types/swagger-ui-express": "4.1.8",
-    "@typescript-eslint/eslint-plugin": "8.59.0",
-    "@typescript-eslint/parser": "8.59.0",
     "esbuild": "0.28.0",
     "eslint": "9.39.4",
+    "jiti": "2.6.0",
     "supertest": "7.2.2",
     "tsx": "4.21.0",
     "typescript": "5.9.3",
+    "typescript-eslint": "8.59.1",
     "vite": "8.0.10",
     "vitest": "2.1.9"
   }
