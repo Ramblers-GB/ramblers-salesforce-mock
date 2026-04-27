@@ -14,6 +14,7 @@ import { getOpenApiDocument } from "./api/openapi.js";
 import { createAdminRouter } from "./admin/admin.router.js";
 import { seedRootOperator } from "./admin/seed.js";
 import { MockMemberProvider } from "./providers/mock-member-provider.js";
+import type { ViteDevServer } from "vite";
 
 const config = loadConfig();
 
@@ -69,8 +70,20 @@ export async function createApp(): Promise<express.Express> {
     },
   }));
 
+  let vite: ViteDevServer | undefined;
+  if (config.NODE_ENV === "development") {
+    const { createServer: createViteServer } = await import("vite");
+    vite = await createViteServer({
+      configFile: path.resolve(__dirname, "..", "vite.config.ts"),
+      server: { middlewareMode: true },
+      appType: "custom",
+    });
+    app.use(vite.middlewares);
+    logger.info("vite dev server mounted (HMR enabled for admin client)");
+  }
+
   app.use(createApiRouter(new MockMemberProvider()));
-  app.use(createAdminRouter());
+  app.use(createAdminRouter(vite));
 
   app.use(express.static(publicDir, { index: false }));
 

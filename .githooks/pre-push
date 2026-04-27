@@ -9,12 +9,12 @@ cd "$ROOT_DIR"
 echo "Running pre-push checks..."
 
 echo "  → typecheck"
-npm run typecheck --silent
+pnpm --silent typecheck
 
 echo "  → lint"
-npm run lint --silent
+pnpm --silent lint
 
 echo "  → tests"
-npm run test --silent
+pnpm --silent test
 
 echo "Pre-push checks passed!"

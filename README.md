@@ -19,19 +19,20 @@ Bigley's MailMan, and Ramblers HQ's own Salesforce build-out team.
 
 - Node 20 + TypeScript (100% TS source, strict mode, no hand-written JS).
 - Express + Mongoose (MongoDB Atlas).
-- esbuild for both server and admin-UI client bundles.
+- pnpm for package management; esbuild for the server bundle; Vite for the admin-UI client bundle and dev HMR.
 - Deployed to Fly.io (`lhr`) at `salesforce-mock.ngx-ramblers.org.uk`.
 
 ## Local development
 
 ```sh
-npm ci
-cp .env.example .env  # fill in ATLAS_URI and admin creds
-npm run dev
+corepack enable                # one-off, activates pnpm at the version pinned in package.json
+pnpm install
+cp .env.example .env           # fill in ATLAS_URI and admin creds
+pnpm dev
 ```
 
 ## Deployment
 
 See `fly.toml`. Secrets live in the NGX staging `config.environments` document
-(single source of truth) and are mirrored to Fly via `fly secrets set` at deploy
-time.
+(the only place they live) and are mirrored to Fly via `fly secrets set` at
+deploy time.

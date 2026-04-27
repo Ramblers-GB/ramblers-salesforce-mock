@@ -6,6 +6,7 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import type { ViteDevServer } from "vite";
 
 const execFileAsync = promisify(execFile);
 
@@ -255,18 +256,27 @@ async function assertOwnsTenant(code: string, operator: OperatorDoc): Promise<Te
   return tenant;
 }
 
-export function createAdminRouter(): Router {
+export function createAdminRouter(vite?: ViteDevServer): Router {
   const router = Router();
   router.use(attachOperator);
 
-  function sendAdminShell(res: Response): void {
+  const devShellPath = path.resolve(process.cwd(), "src", "admin", "client", "admin.html");
+  const prodShellPath = path.resolve(process.cwd(), "public", "admin.html");
+
+  async function sendAdminShell(req: Request, res: Response): Promise<void> {
     res.set("Cache-Control", "no-store, must-revalidate");
-    res.sendFile(path.resolve(process.cwd(), "public", "admin.html"));
+    if (vite) {
+      const raw = await readFile(devShellPath, "utf8");
+      const transformed = await vite.transformIndexHtml(req.originalUrl, raw);
+      res.type("html").send(transformed);
+      return;
+    }
+    res.sendFile(prodShellPath);
   }
 
-  router.get("/admin/login", (_req, res) => {
-    sendAdminShell(res);
-  });
+  router.get("/admin/login", asyncHandler(async (req, res) => {
+    await sendAdminShell(req, res);
+  }));
 
   router.get("/admin", (req, res) => {
     if (req.operator) {
@@ -276,13 +286,13 @@ export function createAdminRouter(): Router {
     }
   });
 
-  router.get("/admin/dashboard", requireOperator("redirect"), (_req, res) => {
-    sendAdminShell(res);
-  });
+  router.get("/admin/dashboard", requireOperator("redirect"), asyncHandler(async (req, res) => {
+    await sendAdminShell(req, res);
+  }));
 
-  router.get("/admin/release-notes", (_req, res) => {
-    sendAdminShell(res);
-  });
+  router.get("/admin/release-notes", asyncHandler(async (req, res) => {
+    await sendAdminShell(req, res);
+  }));
 
   router.post(
     "/admin/api/login",
@@ -542,12 +552,6 @@ export function createAdminRouter(): Router {
         removed: { $ne: true },
       }).sort({ membershipNumber: 1 }).exec();
 
-      // The xlsx writer is the source of truth for the 36-column Insight
-      // Hub format; passing raw doc objects keeps it 1:1 with the upload
-      // path. Granular consent + role fields are present on the docs but
-      // ignored by the writer (it only reads INSIGHT_HUB_COLUMNS keys),
-      // so the output is exactly the Insight Hub schema NGX's
-      // member-bulk-load.ts consumes — no extras, no omissions.
       const rows = docs.map((d) => d.toObject() as unknown as Record<string, unknown>);
       const xlsx = await writeExportAll(rows);
 

@@ -12,5 +12,5 @@ fi
 
 echo "Running lint on staged files..."
 cd "$ROOT_DIR"
-npx eslint $STAGED_FILES
+pnpm exec eslint $STAGED_FILES
 echo "Staged file lint passed!"

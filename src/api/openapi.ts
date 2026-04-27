@@ -1,8 +1,3 @@
-/**
- * OpenAPI 3.0 document derived from schema/salesforce-api.schema.json.
- * The schema file is the source of truth (drift-checked against #209);
- * this module builds the Paths / Security / Servers envelope around it.
- */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { loadConfig } from "../config.js";

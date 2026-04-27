@@ -1,8 +1,5 @@
 name: Deploy
 
-# Deploy runs on push to main once the Fly app and FLY_API_TOKEN secret exist.
-# Until then we keep it manual-only via workflow_dispatch to avoid red builds
-# on commits that do not touch deployment-affecting code.
 on:
   workflow_dispatch:
   push:
@@ -16,7 +13,7 @@ on:
       - "Dockerfile"
       - "fly.toml"
       - "package.json"
-      - "package-lock.json"
+      - "pnpm-lock.yaml"
       - ".github/workflows/deploy.yml"
 
 concurrency:
@@ -27,38 +24,37 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "20"
-          cache: "npm"
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run lint
-      - run: npm run build
-      - run: npm test
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm build
+      - run: pnpm test
       - name: Schema drift check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run check:schema-drift
+        run: pnpm check:schema-drift
 
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    # Only run the Fly deploy step when the secret is configured on the repo,
-    # so an early push that hits main before infra exists fails clearly at the
-    # job filter rather than halfway through a flyctl invocation.
     if: ${{ vars.FLY_DEPLOY_ENABLED == 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "20"
-          cache: "npm"
-      - run: npm ci
-      - run: npm run build:release-notes
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build:release-notes
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - run: flyctl deploy --remote-only
         env:

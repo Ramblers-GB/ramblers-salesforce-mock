@@ -8,12 +8,13 @@
   "engines": {
     "node": ">=20.0.0"
   },
+  "packageManager": "pnpm@10.11.0",
   "scripts": {
     "build:server": "esbuild src/server.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/server.js --packages=external --sourcemap",
-    "build:client": "esbuild src/admin/client/index.ts --bundle --target=es2022 --format=iife --outfile=public/admin.js --sourcemap --minify",
+    "build:client": "vite build",
     "build:release-notes": "tsx scripts/build-release-notes.ts",
-    "build": "npm run build:server && npm run build:client",
-    "predeploy": "npm run build:release-notes",
+    "build": "pnpm run build:server && pnpm run build:client",
+    "predeploy": "pnpm run build:release-notes",
     "deploy": "flyctl deploy",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
@@ -49,11 +50,12 @@
     "@types/swagger-ui-express": "4.1.8",
     "@typescript-eslint/eslint-plugin": "8.59.0",
     "@typescript-eslint/parser": "8.59.0",
-    "esbuild": "0.24.2",
+    "esbuild": "0.28.0",
     "eslint": "9.39.4",
     "supertest": "7.2.2",
     "tsx": "4.21.0",
     "typescript": "5.9.3",
+    "vite": "8.0.10",
     "vitest": "2.1.9"
   }
 }
