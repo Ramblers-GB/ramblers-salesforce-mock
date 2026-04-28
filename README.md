@@ -10,7 +10,7 @@ This repo is one of three that make up the Salesforce Member API family. Archite
 |---|---|---|
 | [`ramblers-salesforce-contract`](https://github.com/nbarrett/ramblers-salesforce-contract) | The shared wire-format package — TypeScript types, Zod request schemas, OpenAPI builder, error envelope, Insight Hub columns, and the `MemberProvider` port interface. Versioned (currently `v0.2.0`). | npm-style git tag dependency |
 | **`ramblers-salesforce-mock`** (this repo) | The development server — Mongo-backed, with the admin SPA, xlsx ingest and synthetic-data generator. | [salesforce-mock.ngx-ramblers.org.uk](https://salesforce-mock.ngx-ramblers.org.uk) |
-| [`ramblers-salesforce-server`](https://github.com/nbarrett/ramblers-salesforce-server) | The production server skeleton — same wire format, same routes, same OpenAPI document, with a Salesforce-backed adapter waiting on Phase 4 of the migration. | [ramblers-salesforce-server.fly.dev](https://ramblers-salesforce-server.fly.dev) |
+| [`ramblers-salesforce-server`](https://github.com/nbarrett/ramblers-salesforce-server) | The production server skeleton — same wire format, same routes, same OpenAPI document, with a Salesforce-backed adapter waiting on Phase 4 of the migration. | [salesforce-server.ngx-ramblers.org.uk](https://salesforce-server.ngx-ramblers.org.uk) |
 
 The mock and the production server are interchangeable from a consumer's perspective — both serve the byte-identical wire shape because both depend on the same contract package. Consumers (NGX-Ramblers, MailMan) point at whichever URL fits their environment.
 
