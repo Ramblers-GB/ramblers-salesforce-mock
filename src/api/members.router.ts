@@ -8,7 +8,7 @@ import {
 import { bearerAuth, requireTenantMatch } from "../auth/bearer-auth.js";
 import { apiError } from "./errors.js";
 import { asyncHandler } from "./async-handler.js";
-import type { MemberProvider } from "../ports/member-provider.js";
+import type { MemberProvider } from "@ramblers/sf-contract";
 
 export function createApiRouter(provider: MemberProvider): Router {
   const router = Router();

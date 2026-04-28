@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@ramblers/sf-contract':
-        specifier: github:nbarrett/ramblers-salesforce-contract#v0.1.0
-        version: https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/4fa017c3294c791e42e153e750af65f2596c15a3
+        specifier: git+https://github.com/nbarrett/ramblers-salesforce-contract.git
+        version: git+https://github.com/nbarrett/ramblers-salesforce-contract.git#0405e62cf09bae13a2977f879322c2161c7747f5
       bcryptjs:
         specifier: 2.4.3
         version: 2.4.3
@@ -650,9 +650,9 @@ packages:
   '@pinojs/redact@0.4.0':
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
 
-  '@ramblers/sf-contract@https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/4fa017c3294c791e42e153e750af65f2596c15a3':
-    resolution: {tarball: https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/4fa017c3294c791e42e153e750af65f2596c15a3}
-    version: 0.1.0
+  '@ramblers/sf-contract@git+https://github.com/nbarrett/ramblers-salesforce-contract.git#0405e62cf09bae13a2977f879322c2161c7747f5':
+    resolution: {commit: 0405e62cf09bae13a2977f879322c2161c7747f5, repo: https://github.com/nbarrett/ramblers-salesforce-contract.git, type: git}
+    version: 0.2.0
     engines: {node: '>=20.0.0'}
 
   '@rolldown/binding-android-arm64@1.0.0-rc.17':
@@ -2817,7 +2817,7 @@ snapshots:
 
   '@pinojs/redact@0.4.0': {}
 
-  '@ramblers/sf-contract@https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/4fa017c3294c791e42e153e750af65f2596c15a3':
+  '@ramblers/sf-contract@git+https://github.com/nbarrett/ramblers-salesforce-contract.git#0405e62cf09bae13a2977f879322c2161c7747f5':
     dependencies:
       zod: 3.25.76
 

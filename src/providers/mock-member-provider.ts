@@ -12,7 +12,7 @@ import type {
   ListMembersOptions,
   ListMembersResult,
   MemberProvider,
-} from "../ports/member-provider.js";
+} from "@ramblers/sf-contract";
 
 export class MockMemberProvider implements MemberProvider {
   async listMembers({
