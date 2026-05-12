@@ -1,7 +1,7 @@
 export { Operator } from "./operator.model.js";
 export type { OperatorAttrs, OperatorDoc, OperatorModel } from "./operator.model.js";
 
-export { Tenant } from "./tenant.model.js";
+export { Tenant, TENANT_KINDS } from "./tenant.model.js";
 export type { TenantAttrs, TenantDoc, TenantKind, TenantModel } from "./tenant.model.js";
 
 export { ApiToken } from "./token.model.js";
@@ -16,3 +16,16 @@ export type {
   ConsentEventDoc,
   ConsentEventModel,
 } from "./consent-event.model.js";
+
+export {
+  Scenario,
+  SCENARIO_CHANGE_TYPES,
+  REMOVAL_REASONS,
+} from "./scenario.model.js";
+export type {
+  ScenarioAttrs,
+  ScenarioChangeSummary,
+  ScenarioChangeType,
+  ScenarioDoc,
+  ScenarioModel,
+} from "./scenario.model.js";

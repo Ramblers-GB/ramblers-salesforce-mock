@@ -366,6 +366,19 @@ body.rsm-busy button[disabled], body.rsm-busy input[disabled] { opacity: 0.6; }
   display: flex; gap: 16px; flex-wrap: wrap;
 }
 .rsm-field-row > label { flex: 1 1 220px; }
+.rsm-fieldset-inner {
+  margin-top: 12px;
+  background: transparent;
+}
+.rsm-amend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 6px 16px;
+  font-size: 0.92rem;
+}
+.rsm-amend-grid label {
+  display: flex; align-items: center; gap: 8px;
+}
 .rsm-radio-list {
   display: flex; flex-direction: column; gap: 8px;
   margin-bottom: 12px;
@@ -622,6 +635,11 @@ body.rsm-busy button[disabled], body.rsm-busy input[disabled] { opacity: 0.6; }
   padding: 2px 8px;
   border-radius: 3px;
   font-weight: 500;
+  text-decoration: none;
+}
+a.rsm-release-sha:hover {
+  color: var(--rsm-granite);
+  text-decoration: underline;
 }
 .rsm-release-date {
   font-size: 0.82rem;

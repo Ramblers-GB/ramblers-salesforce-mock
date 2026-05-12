@@ -19,6 +19,7 @@ The mock and the production server are interchangeable from a consumer's perspec
 - **Day-one endpoints** from [#209](https://github.com/nbarrett/ngx-ramblers/issues/209): `GET /api/groups/{groupCode}/members` and `POST /api/members/{membershipNumber}/consent`. Phase 2 endpoints ([#211](https://github.com/nbarrett/ngx-ramblers/issues/211) — training detail, area aggregates, accreditation) are a future extension.
 - **Multi-tenant scoping**: each API token is scoped to a single `groupCode` or `areaCode`; each operator account (NGX, MailMan, etc.) owns its own tenants and sees only its own data.
 - **Data loading**: upload Insight Hub `ExportAll.xlsx` through the admin UI, or generate synthetic rows for load/shape testing.
+- **Lifecycle scenarios** ([#8](https://github.com/nbarrett/ramblers-salesforce-mock/issues/8)): shape the next `?since=…` delta by asking the mock for "remove N, amend M (firstName + email), add K" — same wire format, no contract change. See [Lifecycle scenarios](#lifecycle-scenarios) below.
 - **Wire-format docs**: OpenAPI at `/api/openapi.json`, Swagger UI at `/docs`. Both built from the contract package's `buildOpenApiDocument()` so they stay aligned with whatever the production server ships.
 - **Admin SPA**: tenant + token + member management at `/admin`. Mock-only — production is API-only.
 
@@ -44,6 +45,45 @@ pnpm dev
 ## Deployment
 
 See `fly.toml`. Secrets live in the NGX staging `config.environments` document (the only place they live) and are mirrored to Fly via `fly secrets set` at deploy time.
+
+## Lifecycle scenarios
+
+The mock exposes a "Scenarios" tab on each tenant (and a matching admin endpoint) for exercising the add / amend / remove paths of [#209](https://github.com/nbarrett/ngx-ramblers/issues/209) without hand-editing Mongo. The wire format does not change - only the underlying state - so any conforming client gets the new shape from a plain `GET /api/groups/{code}/members?since=…` call.
+
+### Flow
+
+1. Initial sync: client pulls members with no `since` and records the request timestamp.
+2. Operator opens the tenant's **Scenarios** tab in `/admin`, enters the recorded timestamp as `since`, picks counts for `removed` / `added` / `amended`, and ticks the fields to mutate on amended members.
+3. The mock soft-removes, amends and inserts members so that every change carries `updatedAt > since` (and added members carry `ingestedAt > since`).
+4. The client pulls again with `?since=<recorded-timestamp>` and gets back exactly the shape the operator asked for, broken down as `added` / `updated` / `removed` in the response's `changes` array.
+
+The admin response includes a `nextSince` timestamp the operator can hand to the client as the baseline for the next cycle, plus a per-membership-number summary of what was changed (and which fields). Re-applying with the same `seed` picks the same members and produces the same field values.
+
+### Curl example
+
+```sh
+# Apply a scenario: remove 2, add 5, amend 3 members (firstName + email)
+curl -s -X POST \
+  -H "Cookie: <admin session cookie>" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "since": "2026-01-01T00:00:00Z",
+        "removed": 2,
+        "added": 5,
+        "amended": 3,
+        "amendFields": ["firstName", "email"],
+        "removalReason": "transferred",
+        "seed": 42
+      }' \
+  https://salesforce-mock.ngx-ramblers.org.uk/admin/api/tenants/KT50/scenarios/delta
+
+# Then any #209 consumer reads the delta with the regular public endpoint:
+curl -s \
+  -H "Authorization: Bearer <token>" \
+  "https://salesforce-mock.ngx-ramblers.org.uk/api/groups/KT50/members?since=2026-01-01T00:00:00Z"
+```
+
+The allow-list of amend fields is: `firstName`, `lastName`, `email`, `postcode`, `mobileNumber`, `landlineTelephone`, `membershipExpiryDate`, `emailMarketingConsent`, `groupMarketingConsent`. `amendFields` is required (and must contain at least one entry) whenever `amended > 0`.
 
 ## Reading
 

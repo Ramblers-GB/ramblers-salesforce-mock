@@ -27,13 +27,15 @@ interface BuildInfo {
 
 let cachedBuildInfo: BuildInfo | undefined;
 
+const isProductionRuntime = process.env["NODE_ENV"] === "production";
+
 /**
  * Loads version + release notes from the pre-baked dist/build-info.json
  * (created by `npm run build:release-notes`). Falls back to live `git log`
  * for dev convenience when the file isn't present yet.
  */
 async function loadBuildInfo(): Promise<BuildInfo> {
-  if (cachedBuildInfo) return cachedBuildInfo;
+  if (cachedBuildInfo && isProductionRuntime) return cachedBuildInfo;
 
   let version = "0.0.0";
   try {
@@ -45,17 +47,18 @@ async function loadBuildInfo(): Promise<BuildInfo> {
     // Fall through to default.
   }
 
-  // Prefer the build-time snapshot.
-  try {
-    const raw = await readFile(
-      path.resolve(process.cwd(), "dist", "build-info.json"),
-      "utf-8",
-    );
-    const parsed = JSON.parse(raw) as BuildInfo;
-    cachedBuildInfo = { ...parsed, version: parsed.version ?? version };
-    return cachedBuildInfo;
-  } catch {
-    // No snapshot — fall back to live git log (dev mode).
+  if (isProductionRuntime) {
+    try {
+      const raw = await readFile(
+        path.resolve(process.cwd(), "dist", "build-info.json"),
+        "utf-8",
+      );
+      const parsed = JSON.parse(raw) as BuildInfo;
+      cachedBuildInfo = { ...parsed, version: parsed.version ?? version };
+      return cachedBuildInfo;
+    } catch {
+      // No snapshot in production — fall back to live git log.
+    }
   }
 
   const FS = "\x1f";
@@ -121,6 +124,9 @@ import type {
 } from "../ingest/synthetic.js";
 import { upsertMembers } from "../ingest/upsert.js";
 import { toSalesforceMember } from "../api/member-mapper.js";
+import { applyScenario, SCENARIO_AMEND_FIELDS } from "./scenarios.js";
+import { Scenario, REMOVAL_REASONS, TENANT_KINDS } from "../db/models/index.js";
+import { REGION_KEYS } from "../ingest/synthetic.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -143,7 +149,7 @@ const loginSchema = z.object({
 const createTenantSchema = z.object({
   code: z.string().trim().min(2).max(6)
     .regex(/^[A-Z0-9]+$/i, "code must be alphanumeric"),
-  kind: z.enum(["group", "area"]),
+  kind: z.enum(TENANT_KINDS),
   name: z.string().trim().min(1).max(120).optional(),
 });
 
@@ -196,7 +202,32 @@ const generateSchema = z.object({
   emailBase: z.string().trim().min(1).max(64).optional(),
   consentDistribution: consentDistributionSchema.optional(),
   roleProportions: roleProportionsSchema.optional(),
-  region: z.enum(["mixed", "kent", "staffordshire", "newcastle", "hampshire"]).optional(),
+  region: z.enum(REGION_KEYS).optional(),
+});
+
+const scenarioSchema = z.object({
+  since: z.string().datetime().optional(),
+  removed: z.coerce.number().int().min(0).max(10_000).default(0),
+  added: z.coerce.number().int().min(0).max(10_000).default(0),
+  amended: z.coerce.number().int().min(0).max(10_000).default(0),
+  amendFields: z.array(z.enum(SCENARIO_AMEND_FIELDS)).optional(),
+  removalReason: z.enum(REMOVAL_REASONS).optional(),
+  seed: z.coerce.number().int().optional(),
+}).superRefine((v, ctx) => {
+  if (v.amended > 0 && (!v.amendFields || v.amendFields.length === 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["amendFields"],
+      message: "amendFields is required and must include at least one field when amended > 0",
+    });
+  }
+  if (v.removed === 0 && v.added === 0 && v.amended === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["removed"],
+      message: "At least one of removed, added or amended must be greater than zero",
+    });
+  }
 });
 
 const createOperatorSchema = z.object({
@@ -539,6 +570,75 @@ export function createAdminRouter(vite?: ViteDevServer): Router {
         generated: rows.length,
         ingest: upsertResult,
       });
+    }),
+  );
+
+  router.get(
+    "/admin/api/tenants/:code/scenarios",
+    requireOperator(),
+    asyncHandler(async (req: Request, res: Response) => {
+      const tenant = await assertOwnsTenant(req.params["code"]!, req.operator!);
+      const limit = Math.min(50, Math.max(1, Number(req.query["limit"] ?? 20)));
+      const docs = await Scenario.find({ tenantCode: tenant.code })
+        .sort({ appliedAt: -1 })
+        .limit(limit)
+        .exec();
+      res.json({
+        tenantCode: tenant.code,
+        scenarios: docs.map((d) => ({
+          id: String(d._id),
+          appliedBy: d.appliedBy,
+          appliedAt: d.appliedAt.toISOString(),
+          since: d.since.toISOString(),
+          nextSince: d.nextSince.toISOString(),
+          seed: d.seed,
+          counts: {
+            removed: d.appliedRemoved,
+            amended: d.appliedAmended,
+            added: d.appliedAdded,
+            requestedRemoved: d.requestedRemoved,
+            requestedAmended: d.requestedAmended,
+            requestedAdded: d.requestedAdded,
+          },
+          amendFields: d.amendFields,
+          removalReason: d.removalReason,
+          warnings: d.warnings,
+        })),
+      });
+    }),
+  );
+
+  router.post(
+    "/admin/api/tenants/:code/scenarios/delta",
+    requireOperator(),
+    asyncHandler(async (req: Request, res: Response) => {
+      const tenant = await assertOwnsTenant(req.params["code"]!, req.operator!);
+      const parsed = scenarioSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: parsed.error.message } });
+        return;
+      }
+      const since = parsed.data.since ? new Date(parsed.data.since) : new Date();
+      try {
+        const result = await applyScenario(tenant, {
+          since,
+          removed: parsed.data.removed,
+          added: parsed.data.added,
+          amended: parsed.data.amended,
+          ...(parsed.data.amendFields ? { amendFields: parsed.data.amendFields } : {}),
+          ...(parsed.data.removalReason ? { removalReason: parsed.data.removalReason } : {}),
+          ...(parsed.data.seed !== undefined ? { seed: parsed.data.seed } : {}),
+        }, req.operator!.username);
+        res.json(result);
+      } catch (err) {
+        if (err && typeof err === "object" && "status" in err) {
+          const status = (err as { status: number }).status;
+          const message = (err as { message?: string }).message ?? "Error";
+          res.status(status).json({ error: { code: "BAD_REQUEST", message } });
+          return;
+        }
+        throw err;
+      }
     }),
   );
 

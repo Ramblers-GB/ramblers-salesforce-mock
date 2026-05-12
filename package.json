@@ -18,6 +18,7 @@
     "deploy": "flyctl deploy",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
+    "dev:start": "bash tools/start-dev.sh",
     "typecheck": "tsc --noEmit",
     "lint": "eslint 'src/**/*.ts' 'scripts/**/*.ts'",
     "test": "vitest run --passWithNoTests",

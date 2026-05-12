@@ -1,7 +1,8 @@
 import { Schema, model } from "mongoose";
 import type { HydratedDocument, Model } from "mongoose";
 
-export type TenantKind = "group" | "area";
+export const TENANT_KINDS = ["group", "area"] as const;
+export type TenantKind = (typeof TENANT_KINDS)[number];
 
 export interface TenantAttrs {
   code: string;
@@ -16,7 +17,7 @@ export interface TenantAttrs {
 const tenantSchema = new Schema<TenantAttrs>(
   {
     code: { type: String, required: true, trim: true },
-    kind: { type: String, required: true, enum: ["group", "area"] },
+    kind: { type: String, required: true, enum: TENANT_KINDS },
     name: { type: String, required: false },
     ownerOperator: { type: String, required: true, lowercase: true, trim: true },
     createdAt: { type: Date, required: true, default: () => new Date() },

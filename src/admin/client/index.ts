@@ -14,9 +14,11 @@ interface OperatorView {
   lastLoginAt?: string;
 }
 
+type TenantKind = "group" | "area";
+
 interface TenantView {
   code: string;
-  kind: "group" | "area";
+  kind: TenantKind;
   name?: string;
   ownerOperator: string;
   createdAt: string;
@@ -39,6 +41,26 @@ interface GeneratedToken {
   prefix: string;
   tenantCode: string;
   warning: string;
+}
+
+interface ScenarioHistoryEntry {
+  id: string;
+  appliedBy: string;
+  appliedAt: string;
+  since: string;
+  nextSince: string;
+  seed: number;
+  counts: {
+    removed: number;
+    amended: number;
+    added: number;
+    requestedRemoved: number;
+    requestedAmended: number;
+    requestedAdded: number;
+  };
+  amendFields?: string[];
+  removalReason?: string;
+  warnings?: string[];
 }
 
 interface SalesforceMember {
@@ -235,7 +257,7 @@ class AdminApp {
     await this.syncSelectionFromUrl();
   }
 
-  private static readonly VALID_TABS = ["members", "generate", "tokens"] as const;
+  private static readonly VALID_TABS = ["members", "generate", "scenarios", "tokens"] as const;
   private static readonly DEFAULT_TAB = "members";
   private currentTab: string = AdminApp.DEFAULT_TAB;
 
@@ -330,7 +352,7 @@ class AdminApp {
           const li = document.createElement("li");
           li.innerHTML = `
             <div class="rsm-release-meta">
-              <span class="rsm-release-sha">${escapeHtml(e.sha)}</span>
+              <a class="rsm-release-sha" href="${REPO_URL}/commit/${encodeURIComponent(e.sha)}" target="_blank" rel="noopener">${escapeHtml(e.sha)}</a>
               <span class="rsm-release-date">${formatDate(e.date)}</span>
             </div>
             <strong class="rsm-release-subject">${linkifyIssueRefs(renderInlineCode(escapeHtml(e.subject)))}</strong>
@@ -600,7 +622,7 @@ class AdminApp {
     newTenantForm?.addEventListener("submit", (e) => {
       e.preventDefault();
       const code = (newTenantForm.elements.namedItem("code") as HTMLInputElement).value;
-      const kind = (newTenantForm.elements.namedItem("kind") as HTMLSelectElement).value as "group" | "area";
+      const kind = (newTenantForm.elements.namedItem("kind") as HTMLSelectElement).value as TenantKind;
       const name = (newTenantForm.elements.namedItem("name") as HTMLInputElement).value;
       void this.createTenant(code, kind, name || undefined);
     });
@@ -635,7 +657,7 @@ class AdminApp {
     }
   }
 
-  private async createTenant(code: string, kind: "group" | "area", name?: string): Promise<void> {
+  private async createTenant(code: string, kind: TenantKind, name?: string): Promise<void> {
     this.setTenantError(null);
     await this.withBusy(async () => {
       try {
@@ -721,6 +743,183 @@ class AdminApp {
         });
       };
     }
+
+    const scenarioForm = $<HTMLFormElement>('[data-rsm-form="scenario"]');
+    if (scenarioForm) {
+      this.bindScenarioForm(scenarioForm, tenant);
+    }
+  }
+
+  private bindScenarioForm(form: HTMLFormElement, tenant: TenantView): void {
+    const sourceSelect = form.querySelector<HTMLSelectElement>("[data-rsm-since-source]");
+    const customWrap = form.querySelector<HTMLElement>("[data-rsm-since-custom]");
+    const customInput = form.querySelector<HTMLInputElement>('input[name="since"]');
+    const updateCustomVisibility = (): void => {
+      if (!sourceSelect || !customWrap) return;
+      const mode = sourceSelect.value;
+      customWrap.hidden = mode !== "custom";
+      if (mode !== "custom" && customInput) customInput.value = "";
+    };
+    sourceSelect?.addEventListener("change", updateCustomVisibility);
+    updateCustomVisibility();
+
+    form.onsubmit = (e): void => {
+      e.preventDefault();
+      try {
+        const body = this.collectScenarioBody(form);
+        void this.applyScenario(tenant, body);
+      } catch (err: unknown) {
+        this.setScenarioError(err instanceof Error ? err.message : String(err));
+      }
+    };
+
+    void this.refreshScenarioHistory(tenant);
+  }
+
+  private collectScenarioBody(form: HTMLFormElement): Record<string, unknown> {
+    const sourceSelect = form.querySelector<HTMLSelectElement>("[data-rsm-since-source]");
+    const source = sourceSelect?.value ?? "now";
+    const sinceInput = form.elements.namedItem("since") as HTMLInputElement | null;
+    let sinceRaw = "";
+    if (source === "custom") {
+      sinceRaw = sinceInput?.value.trim() ?? "";
+      if (!sinceRaw) throw new Error("Pick a custom date/time or switch back to Now");
+    } else if (source.startsWith("scenario:")) {
+      sinceRaw = source.slice("scenario:".length);
+    }
+    const seedRaw = (form.elements.namedItem("seed") as HTMLInputElement).value.trim();
+    const removed = Number((form.elements.namedItem("removed") as HTMLInputElement).value);
+    const added = Number((form.elements.namedItem("added") as HTMLInputElement).value);
+    const amended = Number((form.elements.namedItem("amended") as HTMLInputElement).value);
+    const removalReason = (form.elements.namedItem("removalReason") as HTMLSelectElement).value;
+
+    const amendFields = $$<HTMLInputElement>('input[name="amendField"]:checked', form)
+      .map((cb) => cb.value);
+
+    if (Number.isNaN(removed) || Number.isNaN(added) || Number.isNaN(amended)) {
+      throw new Error("Counts must be numbers");
+    }
+    if (removed === 0 && added === 0 && amended === 0) {
+      throw new Error("Set a count > 0 on at least one of removed, added or amended");
+    }
+    if (amended > 0 && amendFields.length === 0) {
+      throw new Error("Pick at least one field to amend when amended > 0");
+    }
+
+    const body: Record<string, unknown> = { removed, added, amended };
+    if (sinceRaw) {
+      const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(sinceRaw) && sinceRaw.endsWith("Z")
+        ? sinceRaw
+        : new Date(sinceRaw).toISOString();
+      body["since"] = iso;
+    }
+    if (seedRaw) {
+      const seed = Number(seedRaw);
+      if (!Number.isNaN(seed)) body["seed"] = seed;
+    }
+    if (removalReason) body["removalReason"] = removalReason;
+    if (amendFields.length > 0) body["amendFields"] = amendFields;
+    return body;
+  }
+
+  private async applyScenario(
+    tenant: TenantView,
+    body: Record<string, unknown>,
+  ): Promise<void> {
+    this.setScenarioError(null);
+    this.setScenarioResult(null);
+    await this.withBusy(async () => {
+      try {
+        const result = await jsonFetch<Record<string, unknown>>(
+          `/admin/api/tenants/${encodeURIComponent(tenant.code)}/scenarios/delta`,
+          { method: "POST", body: JSON.stringify(body) },
+        );
+        this.setScenarioResult(JSON.stringify(result, null, 2));
+        await this.refreshTenants();
+        await this.refreshMembers(tenant);
+        await this.refreshScenarioHistory(tenant);
+      } catch (err: unknown) {
+        this.setScenarioError(err instanceof Error ? err.message : String(err));
+      }
+    });
+  }
+
+  private async refreshScenarioHistory(tenant: TenantView): Promise<void> {
+    const select = $<HTMLSelectElement>("[data-rsm-since-source]");
+    const tbody = $<HTMLTableSectionElement>("[data-rsm-scenario-history-table] tbody");
+    const help = $<HTMLElement>("[data-rsm-scenario-history-help]");
+    try {
+      const { scenarios } = await jsonFetch<{ scenarios: ScenarioHistoryEntry[] }>(
+        `/admin/api/tenants/${encodeURIComponent(tenant.code)}/scenarios?limit=20`,
+      );
+      if (select) {
+        const prior = select.value;
+        for (const opt of $$<HTMLOptionElement>('option[data-rsm-scenario-option="1"]', select)) {
+          opt.remove();
+        }
+        for (const s of scenarios) {
+          const opt = document.createElement("option");
+          opt.value = `scenario:${s.nextSince}`;
+          opt.dataset["rsmScenarioOption"] = "1";
+          const tag = `${formatDate(s.appliedAt)} - seed ${s.seed} (-${s.counts.removed} ~${s.counts.amended} +${s.counts.added})`;
+          opt.textContent = `After: ${tag}`;
+          select.appendChild(opt);
+        }
+        if (prior && Array.from(select.options).some((o) => o.value === prior)) {
+          select.value = prior;
+        }
+      }
+      if (help) help.hidden = scenarios.length === 0;
+      if (tbody) {
+        tbody.innerHTML = "";
+        if (scenarios.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" class="rsm-muted">No scenarios applied yet for this tenant.</td></tr>';
+        } else {
+          for (const s of scenarios) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${escapeHtml(formatDate(s.appliedAt))}</td>
+              <td><code>${escapeHtml(s.appliedBy)}</code></td>
+              <td>${s.seed}</td>
+              <td>${s.counts.removed}${s.counts.removed !== s.counts.requestedRemoved ? `<small class="rsm-muted"> /${s.counts.requestedRemoved}</small>` : ""}</td>
+              <td>${s.counts.amended}${s.counts.amended !== s.counts.requestedAmended ? `<small class="rsm-muted"> /${s.counts.requestedAmended}</small>` : ""}</td>
+              <td>${s.counts.added}${s.counts.added !== s.counts.requestedAdded ? `<small class="rsm-muted"> /${s.counts.requestedAdded}</small>` : ""}</td>
+              <td><code>${escapeHtml(s.nextSince)}</code></td>
+              <td></td>`;
+            const action = document.createElement("button");
+            action.type = "button";
+            action.className = "rsm-btn rsm-btn-small rsm-btn-ghost";
+            action.textContent = "Use as since";
+            action.addEventListener("click", () => {
+              if (select) {
+                select.value = `scenario:${s.nextSince}`;
+                select.dispatchEvent(new Event("change", { bubbles: true }));
+              }
+            });
+            tr.lastElementChild!.appendChild(action);
+            tbody.appendChild(tr);
+          }
+        }
+      }
+    } catch (err: unknown) {
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="8" class="rsm-ingest-error">${escapeHtml(err instanceof Error ? err.message : String(err))}</td></tr>`;
+      }
+    }
+  }
+
+  private setScenarioResult(text: string | null): void {
+    const el = $<HTMLElement>("[data-rsm-scenario-result]");
+    if (!el) return;
+    if (!text) { el.hidden = true; el.textContent = ""; }
+    else { el.hidden = false; el.textContent = text; }
+  }
+
+  private setScenarioError(message: string | null): void {
+    const el = $<HTMLElement>("[data-rsm-scenario-error]");
+    if (!el) return;
+    if (!message) { el.hidden = true; el.textContent = ""; }
+    else { el.hidden = false; el.textContent = message; }
   }
 
   private renderPlaceholderChips(genForm: HTMLFormElement, customInput: HTMLInputElement): void {
@@ -1326,11 +1525,12 @@ function renderInlineCode(escapedText: string): string {
   return escapedText.replace(/`([^`]+)`/g, "<code>$1</code>");
 }
 
-const ISSUE_REPO_URL = "https://github.com/nbarrett/ramblers-salesforce-mock/issues";
+const REPO_URL = "https://github.com/nbarrett/ramblers-salesforce-mock";
+const ISSUE_REPO_URL = `${REPO_URL}/issues`;
 
 function linkifyIssueRefs(escapedText: string): string {
   return escapedText.replace(
-    /(^|[^\w/])#(\d+)\b/g,
+    /(^|[^\w/&])#(\d+)\b/g,
     `$1<a href="${ISSUE_REPO_URL}/$2" target="_blank" rel="noopener">#$2</a>`,
   );
 }

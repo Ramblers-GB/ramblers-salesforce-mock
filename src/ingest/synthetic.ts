@@ -12,6 +12,7 @@
  * Hub columns and would be lost going through xlsx.
  */
 import { randomInt } from "node:crypto";
+import type { TenantKind } from "../db/models/index.js";
 import type { ParsedMember } from "./xlsx-parser.js";
 
 const FIRST_NAMES = [
@@ -195,7 +196,7 @@ export interface RoleProportions {
 export interface SyntheticOptions {
   count: number;
   tenantCode: string;
-  tenantKind: "group" | "area";
+  tenantKind: TenantKind;
   groupName?: string;
   seed?: number;
   emailTemplate?: string;
@@ -206,6 +207,8 @@ export interface SyntheticOptions {
   roleProportions?: RoleProportions;
   /** Geographic pool for towns + postcode prefixes. Default: "mixed" (all regions combined). */
   region?: RegionKey;
+  /** First membership number to allocate. Default: 3_000_000. */
+  startMembershipNumber?: number;
 }
 
 /** Deterministic PRNG (mulberry32) so a seed + count produces stable output. */
@@ -405,7 +408,7 @@ export function generateSyntheticMembers(
     opts.groupName ??
     `${tenantGroupCode ?? tenantAreaCode ?? "Mock"} Walking Group`;
 
-  const startMemNo = 3_000_000;
+  const startMemNo = opts.startMembershipNumber ?? 3_000_000;
   const now = Date.now();
   const width = nnWidth(count);
   const seenEmails = new Set<string>();
