@@ -50,10 +50,10 @@ export function toSalesforceMember(doc: MemberDoc): SalesforceMember {
   setIfDefined(out, "memberType", doc.memberType);
   setIfDefined(out, "memberTerm", doc.memberTerm);
   setIfDefined(out, "memberStatus", doc.memberStatus);
-  setIfDefined(out, "membershipType", doc.membershipType);
+  setIfDefined(out, "membershipArrangement", doc.membershipArrangement);
   setIfDefined(out, "jointWith", doc.jointWith);
   setIfDefined(out, "membershipExpiryDate", iso(doc.membershipExpiryDate));
-  setIfDefined(out, "ramblersJoinDate", iso(doc.ramblersJoinDate));
+  setIfDefined(out, "ramblersJoinedDate", iso(doc.ramblersJoinedDate));
   setIfDefined(out, "areaName", doc.areaName);
   setIfDefined(out, "areaJoinedDate", iso(doc.areaJoinedDate));
 

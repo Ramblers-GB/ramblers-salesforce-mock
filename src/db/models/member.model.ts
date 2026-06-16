@@ -41,10 +41,10 @@ export interface MemberAttrs {
   memberType?: string;
   memberTerm?: MemberTerm;
   memberStatus?: string;
-  membershipType?: string;
+  membershipArrangement?: string;
   jointWith?: string;
   membershipExpiryDate?: Date;
-  ramblersJoinDate?: Date;
+  ramblersJoinedDate?: Date;
 
   areaName?: string;
   areaJoinedDate?: Date;
@@ -139,12 +139,12 @@ const memberSchema = new Schema<MemberAttrs>(
     groupCode: String,
     groupJoinedDate: Date,
     memberType: String,
-    memberTerm: { type: String, enum: ["life", "annual"], required: false },
+    memberTerm: { type: String, enum: ["Annual", "Life"], required: false },
     memberStatus: String,
-    membershipType: String,
+    membershipArrangement: String,
     jointWith: String,
     membershipExpiryDate: Date,
-    ramblersJoinDate: Date,
+    ramblersJoinedDate: Date,
 
     areaName: String,
     areaJoinedDate: Date,

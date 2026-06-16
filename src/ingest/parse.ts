@@ -64,11 +64,9 @@ export function parseCell(
 
     case "memberTerm": {
       const lower = raw.toLowerCase();
-      if (lower === "life" || lower === "annual") return lower;
+      if (lower === "annual") return "Annual";
+      if (lower === "life") return "Life";
       return undefined;
     }
-
-    case "membershipType":
-      return raw;
   }
 }

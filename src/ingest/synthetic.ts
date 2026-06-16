@@ -120,8 +120,8 @@ function postcodeAreasFor(region: RegionKey): readonly string[] {
 }
 
 const TITLES = ["Mr", "Mrs", "Miss", "Ms", "Dr"] as const;
-const MEMBER_TERMS = ["annual", "life"] as const;
-const MEMBER_STATUS = ["Active", "payment pending"] as const;
+const MEMBER_TERMS = ["Annual", "Life"] as const;
+const MEMBER_STATUS = ["Active", "Payment pending"] as const;
 const MEMBERSHIP_TYPES = ["Individual", "Joint"] as const;
 
 const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
@@ -518,9 +518,9 @@ export function generateSyntheticMembers(
       memberType: "Member",
       memberTerm: pick(rng, MEMBER_TERMS),
       memberStatus: pick(rng, MEMBER_STATUS),
-      membershipType: pick(rng, MEMBERSHIP_TYPES),
+      membershipArrangement: pick(rng, MEMBERSHIP_TYPES),
       membershipExpiryDate: expiry,
-      ramblersJoinDate: ramblersJoin,
+      ramblersJoinedDate: ramblersJoin,
 
       areaName,
       areaJoinedDate: areaJoin,
