@@ -21,6 +21,8 @@ RUN pnpm install --frozen-lockfile --prod && pnpm store prune
 RUN apk del git
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/public ./public
+COPY migrations ./migrations
+COPY migrate-mongo-config.js ./migrate-mongo-config.js
 RUN addgroup -S app && adduser -S app -G app && chown -R app:app /app
 USER app
 EXPOSE 8080

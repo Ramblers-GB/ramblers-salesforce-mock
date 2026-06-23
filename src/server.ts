@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { loadConfig } from "./config.js";
 import { logger } from "./logger.js";
 import { connectMongo, mongoConnectionState } from "./db/connection.js";
+import { runMigrations } from "./db/migrate.js";
 import { createApiRouter } from "./api/members.router.js";
 import { getOpenApiDocument } from "./api/openapi.js";
 import { createAdminRouter } from "./admin/admin.router.js";
@@ -96,6 +97,7 @@ export async function createApp(): Promise<express.Express> {
 
 async function main(): Promise<void> {
   await connectMongo();
+  await runMigrations();
   await seedRootOperator();
   const app = await createApp();
   app.listen(config.PORT, () => {
