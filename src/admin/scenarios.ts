@@ -233,7 +233,10 @@ export async function applyScenario(
 
   const wantedAdded = Math.max(0, request.added);
   if (wantedAdded > 0) {
-    const startMemNo = nextMembershipNumberStart(existing);
+    const allForTenant = await Member.find({ tenantCode: tenant.code })
+      .select({ membershipNumber: 1 })
+      .exec();
+    const startMemNo = nextMembershipNumberStart(allForTenant);
     const newRows = generateSyntheticMembers({
       count: wantedAdded,
       tenantCode: tenant.code,
