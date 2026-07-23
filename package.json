@@ -30,7 +30,7 @@
     "setup:hooks": "bash tools/setup-git-hooks.sh"
   },
   "dependencies": {
-    "@ramblers/sf-contract": "github:nbarrett/ramblers-salesforce-contract#v1.0.0",
+    "@ramblers/sf-contract": "github:nbarrett/ramblers-salesforce-contract#v1.0.2",
     "bcryptjs": "2.4.3",
     "cookie-parser": "1.4.7",
     "csrf-sync": "4.2.1",
