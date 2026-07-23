@@ -18,7 +18,7 @@ The superseded Ticket #209 routes are not retained. Consumers therefore fail cle
 
 ## Contract
 
-The mock pins [`@ramblers/sf-contract` v1.0.0](https://github.com/nbarrett/ramblers-salesforce-contract/releases/tag/v1.0.0). That package mirrors the published SwaggerHub definition and supplies the TypeScript types, validation schemas, error mappings and OpenAPI document used here.
+The mock pins [`@ramblers/sf-contract` v1.0.2](https://github.com/nbarrett/ramblers-salesforce-contract/releases/tag/v1.0.2). That package mirrors the published SwaggerHub definition and supplies the TypeScript types, validation schemas, error mappings and OpenAPI document used here.
 
 - Swagger UI: [salesforce-mock.ngx-ramblers.org.uk/docs](https://salesforce-mock.ngx-ramblers.org.uk/docs)
 - OpenAPI JSON: [salesforce-mock.ngx-ramblers.org.uk/api/openapi.json](https://salesforce-mock.ngx-ramblers.org.uk/api/openapi.json)
