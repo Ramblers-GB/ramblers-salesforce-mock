@@ -64,11 +64,20 @@ interface ScenarioHistoryEntry {
 }
 
 interface SalesforceMember {
-  membershipNumber?: string;
+  membershipNo?: string;
   firstName?: string;
   lastName: string;
   email?: string;
-  emailMarketingConsent: boolean;
+  emailConsent: boolean;
+}
+
+interface WritebackView {
+  requestedAt: string;
+  kind: "unsubscribe" | "bounce";
+  memberRef: string;
+  emailAddress: string;
+  bounceType?: "Hard" | "Soft";
+  resultingState: string;
 }
 
 interface ReleaseEntry {
@@ -257,7 +266,7 @@ class AdminApp {
     await this.syncSelectionFromUrl();
   }
 
-  private static readonly VALID_TABS = ["members", "generate", "scenarios", "tokens"] as const;
+  private static readonly VALID_TABS = ["members", "generate", "writebacks", "tokens"] as const;
   private static readonly DEFAULT_TAB = "members";
   private currentTab: string = AdminApp.DEFAULT_TAB;
 
@@ -699,7 +708,11 @@ class AdminApp {
     this.setClearError(null);
     this.setClearResult(null);
 
-    await Promise.all([this.refreshTokens(tenant), this.refreshMembers(tenant)]);
+    await Promise.all([
+      this.refreshTokens(tenant),
+      this.refreshMembers(tenant),
+      this.refreshWritebacks(tenant),
+    ]);
   }
 
   private bindDetailForms(tenant: TenantView): void {
@@ -1491,10 +1504,34 @@ class AdminApp {
       const tr = document.createElement("tr");
       const name = [m.firstName, m.lastName].filter(Boolean).join(" ");
       tr.innerHTML = `
-        <td><code>${escapeHtml(m.membershipNumber ?? "")}</code></td>
+        <td><code>${escapeHtml(m.membershipNo ?? "")}</code></td>
         <td>${escapeHtml(name)}</td>
         <td>${escapeHtml(m.email ?? "")}</td>
-        <td>${m.emailMarketingConsent ? "yes" : "no"}</td>`;
+        <td>${m.emailConsent ? "yes" : "no"}</td>`;
+      tbody.appendChild(tr);
+    }
+  }
+
+  private async refreshWritebacks(tenant: TenantView): Promise<void> {
+    const body = await jsonFetch<{ writebacks: WritebackView[] }>(
+      `/admin/api/tenants/${encodeURIComponent(tenant.code)}/writebacks?limit=50`,
+    );
+    const tbody = $<HTMLTableSectionElement>("[data-rsm-writebacks-table] tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    if (body.writebacks.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="rsm-muted">No writebacks recorded for this team.</td></tr>';
+      return;
+    }
+    for (const writeback of body.writebacks) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(formatDate(writeback.requestedAt))}</td>
+        <td>${escapeHtml(writeback.kind)}</td>
+        <td><code>${escapeHtml(writeback.memberRef)}</code></td>
+        <td>${escapeHtml(writeback.emailAddress)}</td>
+        <td>${escapeHtml(writeback.bounceType ?? "")}</td>
+        <td>${escapeHtml(writeback.resultingState)}</td>`;
       tbody.appendChild(tr);
     }
   }

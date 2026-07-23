@@ -1,112 +1,99 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import {
-  consentUpdateRequestSchema,
-  listMembersQuerySchema,
-  type ConsentUpdateRequest,
+  bouncedEmailRequestSchema,
+  supportersQuerySchema,
+  unsubscribeRequestSchema,
+  type SupporterProvider,
+  type SupporterUpdateSuccess,
 } from "@ramblers/sf-contract";
-import { bearerAuth, requireTenantMatch } from "../auth/bearer-auth.js";
-import { apiError } from "./errors.js";
+import { authenticateTeam } from "../auth/bearer-auth.js";
 import { asyncHandler } from "./async-handler.js";
-import type { MemberProvider } from "@ramblers/sf-contract";
+import { supporterUpdateError, supportersError } from "./errors.js";
 
-export function createApiRouter(provider: MemberProvider): Router {
+async function authenticatedTeam(req: Request, res: Response, updateOperation: boolean): Promise<string | null> {
+  const credentials = supportersQuerySchema.safeParse(req.query);
+  if (!credentials.success) {
+    if (updateOperation) {
+      supporterUpdateError(res, "Required field missing", "api_key and team_code are required");
+    } else {
+      supportersError(res, "Bad request", "api_key and team_code are required");
+    }
+    return null;
+  }
+
+  const authentication = await authenticateTeam(req);
+  if (authentication.kind !== "ok") {
+    if (updateOperation) {
+      supporterUpdateError(res, "Required field missing", "Unauthorised api_key and team_code combination", 401);
+    } else {
+      supportersError(res, "Unauthorised", "Unauthorised api_key and team_code combination");
+    }
+    return null;
+  }
+  return authentication.teamCode;
+}
+
+export function createApiRouter(provider: SupporterProvider): Router {
   const router = Router();
 
   router.get(
-    "/api/groups/:groupCode/members",
-    asyncHandler(bearerAuth),
+    "/get_supporters",
     asyncHandler(async (req: Request, res: Response) => {
-      const pathTenant = req.params["groupCode"];
-      if (!pathTenant) {
-        apiError(res, "BAD_REQUEST", "groupCode path parameter is required");
+      const teamCode = await authenticatedTeam(req, res, false);
+      if (!teamCode) {
         return;
       }
-      if (!requireTenantMatch(pathTenant, req, res)) return;
-
-      const parsed = listMembersQuerySchema.safeParse(req.query);
-      if (!parsed.success) {
-        apiError(res, "BAD_REQUEST", "Invalid query parameters", {
-          issues: parsed.error.issues,
-        });
+      const result = await provider.supporters({ teamCode });
+      if (result.kind === "teamNotFound") {
+        supportersError(res, "Bad request", `No record of team ${teamCode}`);
         return;
       }
-      const { since, includeExpired } = parsed.data;
-
-      const result = await provider.listMembers({
-        groupCode: pathTenant,
-        ...(since ? { since: new Date(since) } : {}),
-        ...(includeExpired !== undefined ? { includeExpired } : {}),
-      });
-
-      if (result.kind === "groupNotFound") {
-        apiError(res, "GROUP_NOT_FOUND", `No data loaded for ${pathTenant}`);
-        return;
-      }
-
-      res.json(result.response);
+      res.json(result.supporters);
     }),
   );
 
   router.post(
-    "/api/members/:membershipNumber/consent",
-    asyncHandler(bearerAuth),
+    "/unsubscribe",
     asyncHandler(async (req: Request, res: Response) => {
-      const membershipNumber = req.params["membershipNumber"];
-      if (!membershipNumber) {
-        apiError(res, "BAD_REQUEST", "membershipNumber path parameter is required");
+      const teamCode = await authenticatedTeam(req, res, true);
+      if (!teamCode) {
         return;
       }
-      const token = req.apiToken;
-      if (!token) {
-        apiError(res, "INTERNAL_ERROR", "bearerAuth did not populate req.apiToken");
+      const request = unsubscribeRequestSchema.safeParse(req.body);
+      if (!request.success) {
+        supporterUpdateError(res, "Invalid email", "Invalid unsubscribe request");
         return;
       }
-
-      const parsed = consentUpdateRequestSchema.safeParse(req.body);
-      if (!parsed.success) {
-        apiError(res, "BAD_REQUEST", "Invalid consent request body", {
-          issues: parsed.error.issues,
-        });
+      const result = await provider.unsubscribe({ teamCode, request: request.data, appliedAt: new Date() });
+      if (result.kind === "supporterNotFound") {
+        supporterUpdateError(res, "Email not recognised for this group", "No record of the supporter");
         return;
       }
+      const response: SupporterUpdateSuccess = { responseText: "Update processed" };
+      res.json(response);
+    }),
+  );
 
-      const body = parsed.data;
-      const consentRequest: ConsentUpdateRequest = {
-        source: body.source,
-        timestamp: body.timestamp,
-        ...(body.emailMarketingConsent !== undefined
-          ? { emailMarketingConsent: body.emailMarketingConsent }
-          : {}),
-        ...(body.groupMarketingConsent !== undefined
-          ? { groupMarketingConsent: body.groupMarketingConsent }
-          : {}),
-        ...(body.areaMarketingConsent !== undefined
-          ? { areaMarketingConsent: body.areaMarketingConsent }
-          : {}),
-        ...(body.otherMarketingConsent !== undefined
-          ? { otherMarketingConsent: body.otherMarketingConsent }
-          : {}),
-        ...(body.reason !== undefined ? { reason: body.reason } : {}),
-      };
-
-      const result = await provider.applyConsent({
-        tenantCode: token.tenantCode,
-        membershipNumber,
-        request: consentRequest,
-        appliedAt: new Date(),
-      });
-
-      if (result.kind === "memberNotFound") {
-        apiError(
-          res,
-          "MEMBER_NOT_FOUND",
-          `No member with membershipNumber ${membershipNumber} in tenant ${token.tenantCode}`,
-        );
+  router.post(
+    "/bounced_email",
+    asyncHandler(async (req: Request, res: Response) => {
+      const teamCode = await authenticatedTeam(req, res, true);
+      if (!teamCode) {
         return;
       }
-
-      res.status(200).json(result.response);
+      const request = bouncedEmailRequestSchema.safeParse(req.body);
+      if (!request.success) {
+        supporterUpdateError(res, "Invalid email", "Invalid bounced email request");
+        return;
+      }
+      const result = await provider.bounce({ teamCode, request: request.data, appliedAt: new Date() });
+      if (result.kind === "supporterNotFound") {
+        supporterUpdateError(res, "Email not recognised for this group", "No record of the supporter");
+        return;
+      }
+      const response: SupporterUpdateSuccess = { responseText: "Bounce logged" };
+      res.json(response);
     }),
   );
 

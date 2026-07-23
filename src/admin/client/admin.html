@@ -129,9 +129,9 @@
       </header>
 
       <nav class="rsm-detail-tabs" data-rsm-detail-tabs role="tablist">
-        <button type="button" class="rsm-detail-tab" data-rsm-detail-tab="members" role="tab" aria-selected="true">Members</button>
+        <button type="button" class="rsm-detail-tab" data-rsm-detail-tab="members" role="tab" aria-selected="true">Supporters</button>
         <button type="button" class="rsm-detail-tab" data-rsm-detail-tab="generate" role="tab" aria-selected="false">Generate</button>
-        <button type="button" class="rsm-detail-tab" data-rsm-detail-tab="scenarios" role="tab" aria-selected="false">Scenarios</button>
+        <button type="button" class="rsm-detail-tab" data-rsm-detail-tab="writebacks" role="tab" aria-selected="false">Writebacks</button>
         <button type="button" class="rsm-detail-tab" data-rsm-detail-tab="tokens" role="tab" aria-selected="false">Tokens</button>
       </nav>
 
@@ -480,11 +480,22 @@
       </article>
       </div><!-- /scenarios panel -->
 
+      <div class="rsm-detail-tab-panel" data-rsm-detail-panel="writebacks" hidden>
+      <article class="rsm-panel">
+        <h3>Unsubscribe and bounce writebacks <small class="rsm-muted">(latest 50)</small></h3>
+        <p class="rsm-muted">Unsubscribe requests are recorded without assuming which consent field Head Office will change.</p>
+        <table class="rsm-table" data-rsm-writebacks-table>
+          <thead><tr><th>Received</th><th>Operation</th><th>Member ref</th><th>Email</th><th>Bounce</th><th>Result</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </article>
+      </div>
+
       <div class="rsm-detail-tab-panel" data-rsm-detail-panel="members">
       <article class="rsm-panel">
         <header class="rsm-panel-head">
-          <h3>Members <small class="rsm-muted">(first 20)</small></h3>
-          <button type="button" class="rsm-btn rsm-btn-small rsm-btn-danger" data-rsm-btn="clear-members">Clear members</button>
+          <h3>Supporters <small class="rsm-muted">(first 20)</small></h3>
+          <button type="button" class="rsm-btn rsm-btn-small rsm-btn-danger" data-rsm-btn="clear-members">Clear supporters</button>
         </header>
         <pre class="rsm-ingest-error" data-rsm-clear-error hidden></pre>
         <p class="rsm-muted" data-rsm-clear-result hidden></p>

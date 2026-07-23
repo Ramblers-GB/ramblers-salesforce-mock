@@ -1,21 +1,40 @@
-/**
- * Member model. Mirrors SalesforceMember from the #209 schema, with the
- * addition of a `tenantCode` discriminator enforcing per-tenant isolation.
- * Every read path must filter by tenantCode.
- */
 import { Schema, model } from "mongoose";
 import type { HydratedDocument, Model } from "mongoose";
-import type {
-  AreaMembership,
-  GroupMembership,
-  MemberTerm,
-  RemovalReason,
-} from "@ramblers/sf-contract";
+
+export type MemberTerm = "Annual" | "Life";
+export type RemovalReason = "expired" | "transferred" | "deceased" | "other";
+
+export interface GroupMembership {
+  groupCode: string;
+  primary: boolean;
+  roles?: {
+    walkLeader?: boolean;
+    emailSender?: boolean;
+    viewMembershipData?: boolean;
+  };
+}
+
+export interface AreaMembership {
+  areaCode: string;
+  roles?: {
+    emailSender?: boolean;
+  };
+}
+
+export interface StoredVolunteerRole {
+  roleName: string;
+  startDate: Date;
+  displayName?: string;
+  walkLeaderStatus?: string;
+  wellbeingWalksRole: boolean;
+}
 
 export interface MemberAttrs {
   tenantCode: string;
 
   salesforceId: string;
+  memberRef?: string;
+  contactId?: string;
   membershipNumber?: string;
   firstName?: string;
   preferredName?: string;
@@ -44,6 +63,7 @@ export interface MemberAttrs {
   membershipArrangement?: string;
   jointWith?: string;
   membershipExpiryDate?: Date;
+  membershipEndDate?: Date;
   ramblersJoinedDate?: Date;
 
   areaName?: string;
@@ -53,7 +73,26 @@ export interface MemberAttrs {
   areaMemberships?: AreaMembership[];
 
   volunteer?: boolean;
+  teamStatus?: "Member" | "Affiliated" | "Volunteer" | "Wellbeing Walker";
+  teamRelationshipFrom?: Date;
+  wellbeingWalker?: boolean;
+  walkLeader?: boolean;
+  volunteerRoles?: StoredVolunteerRole[];
   affiliateMemberPrimaryGroup?: string;
+
+  doNotEmail?: boolean;
+  noWalkProgram?: boolean;
+  noCampaigning?: boolean;
+  noSurveys?: boolean;
+  canEmailVolunteers?: boolean;
+  canEmailMembers?: boolean;
+  canEmailWellbeingWalkers?: boolean;
+  canViewMemberData?: boolean;
+  canViewMemberDate?: boolean;
+  emailConsent?: boolean;
+  postConsent?: boolean;
+  phoneConsent?: boolean;
+  emailConsentWellbeingWalks?: boolean;
 
   emailMarketingConsent: boolean;
   emailPermissionLastUpdated?: Date;
@@ -67,11 +106,9 @@ export interface MemberAttrs {
   areaMarketingConsent?: boolean;
   otherMarketingConsent?: boolean;
 
-  /** Tombstone flag for incremental sync removals. */
   removed?: boolean;
   removalReason?: RemovalReason;
 
-  /** Bookkeeping. */
   ingestedAt: Date;
   updatedAt: Date;
 }
@@ -111,11 +148,24 @@ const areaMembershipSubSchema = new Schema<AreaMembership>(
   { _id: false },
 );
 
+const volunteerRoleSubSchema = new Schema<StoredVolunteerRole>(
+  {
+    roleName: { type: String, required: true },
+    startDate: { type: Date, required: true },
+    displayName: { type: String, required: false },
+    walkLeaderStatus: { type: String, required: false },
+    wellbeingWalksRole: { type: Boolean, required: true, default: false },
+  },
+  { _id: false },
+);
+
 const memberSchema = new Schema<MemberAttrs>(
   {
     tenantCode: { type: String, required: true, index: true },
 
     salesforceId: { type: String, required: true },
+    memberRef: { type: String, required: false, index: true },
+    contactId: { type: String, required: false, index: true },
     membershipNumber: { type: String, required: false, index: true },
     firstName: String,
     preferredName: String,
@@ -144,6 +194,7 @@ const memberSchema = new Schema<MemberAttrs>(
     membershipArrangement: String,
     jointWith: String,
     membershipExpiryDate: Date,
+    membershipEndDate: Date,
     ramblersJoinedDate: Date,
 
     areaName: String,
@@ -153,7 +204,30 @@ const memberSchema = new Schema<MemberAttrs>(
     areaMemberships: { type: [areaMembershipSubSchema], default: undefined },
 
     volunteer: Boolean,
+    teamStatus: {
+      type: String,
+      enum: ["Member", "Affiliated", "Volunteer", "Wellbeing Walker"],
+      required: false,
+    },
+    teamRelationshipFrom: Date,
+    wellbeingWalker: Boolean,
+    walkLeader: Boolean,
+    volunteerRoles: { type: [volunteerRoleSubSchema], default: undefined },
     affiliateMemberPrimaryGroup: String,
+
+    doNotEmail: Boolean,
+    noWalkProgram: Boolean,
+    noCampaigning: Boolean,
+    noSurveys: Boolean,
+    canEmailVolunteers: Boolean,
+    canEmailMembers: Boolean,
+    canEmailWellbeingWalkers: Boolean,
+    canViewMemberData: Boolean,
+    canViewMemberDate: Boolean,
+    emailConsent: Boolean,
+    postConsent: Boolean,
+    phoneConsent: Boolean,
+    emailConsentWellbeingWalks: Boolean,
 
     emailMarketingConsent: { type: Boolean, required: true },
     emailPermissionLastUpdated: Date,
@@ -178,6 +252,7 @@ const memberSchema = new Schema<MemberAttrs>(
 
 memberSchema.index({ tenantCode: 1, salesforceId: 1 }, { unique: true });
 memberSchema.index({ tenantCode: 1, membershipNumber: 1 });
+memberSchema.index({ tenantCode: 1, memberRef: 1 });
 memberSchema.index({ tenantCode: 1, updatedAt: 1 });
 
 export type MemberDoc = HydratedDocument<MemberAttrs>;

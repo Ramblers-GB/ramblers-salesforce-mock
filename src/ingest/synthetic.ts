@@ -121,8 +121,23 @@ function postcodeAreasFor(region: RegionKey): readonly string[] {
 
 const TITLES = ["Mr", "Mrs", "Miss", "Ms", "Dr"] as const;
 const MEMBER_TERMS = ["Annual", "Life"] as const;
-const MEMBER_STATUS = ["Active", "Payment pending"] as const;
-const MEMBERSHIP_TYPES = ["Individual", "Joint"] as const;
+const MEMBER_STATUS = [
+  "Active",
+  "Payment pending",
+  "Suspended",
+  "Lapsed",
+  "Inactive",
+  "Resigned",
+] as const;
+const MEMBERSHIP_TYPES = [
+  "Corporate Membership",
+  "Individual Life Membership",
+  "Individual Membership",
+  "Joint Life Membership",
+  "Joint Membership",
+  "Membership",
+] as const;
+const TEAM_STATUSES = ["Member", "Affiliated", "Volunteer", "Wellbeing Walker"] as const;
 
 const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
@@ -444,6 +459,8 @@ export function generateSyntheticMembers(
     const title = pick(rng, TITLES);
     const town = pick(rng, towns);
     const membershipNumber = String(startMemNo + i);
+    const teamStatus = TEAM_STATUSES[i % TEAM_STATUSES.length]!;
+    const hasMembershipNumber = teamStatus === "Member" || teamStatus === "Affiliated";
 
     const groupCode =
       tenantGroupCode ??
@@ -499,7 +516,9 @@ export function generateSyntheticMembers(
 
     const member: ParsedMember = {
       salesforceId: `003MOCK_${membershipNumber}`,
-      membershipNumber,
+      memberRef: `SUP-${membershipNumber}`,
+      contactId: `003MOCK_${membershipNumber}`,
+      ...(hasMembershipNumber ? { membershipNumber } : {}),
       firstName,
       initials: firstName[0] ?? "",
       lastName,
@@ -515,7 +534,7 @@ export function generateSyntheticMembers(
       groupName,
       groupCode,
       groupJoinedDate: groupJoin,
-      memberType: "Member",
+      memberType: pick(rng, MEMBERSHIP_TYPES),
       memberTerm: pick(rng, MEMBER_TERMS),
       memberStatus: pick(rng, MEMBER_STATUS),
       membershipArrangement: pick(rng, MEMBERSHIP_TYPES),
@@ -533,7 +552,38 @@ export function generateSyntheticMembers(
         },
       ],
 
-      volunteer: bernoulli(rng, 0.15),
+      volunteer: teamStatus === "Volunteer",
+      teamStatus,
+      teamRelationshipFrom: groupJoin,
+      wellbeingWalker: teamStatus === "Wellbeing Walker",
+      walkLeader,
+      ...(teamStatus === "Volunteer"
+        ? {
+            volunteerRoles: [
+              {
+                roleName: walkLeader ? "Walk Leader" : "Footpath Inspector",
+                startDate: groupJoin,
+                displayName: walkLeader ? "Walk Leader" : "Path Inspector",
+                walkLeaderStatus: walkLeader ? "Current Walk Leader" : "Not A Walk Leader",
+                wellbeingWalksRole: false,
+              },
+            ],
+          }
+        : {}),
+
+      doNotEmail: !flags.emailMarketingConsent,
+      noWalkProgram: bernoulli(rng, 0.1),
+      noCampaigning: bernoulli(rng, 0.2),
+      noSurveys: bernoulli(rng, 0.2),
+      canEmailVolunteers: emailSender,
+      canEmailMembers: emailSender,
+      canEmailWellbeingWalkers: emailSender,
+      canViewMemberData: viewMembershipData,
+      canViewMemberDate: viewMembershipData,
+      emailConsent: flags.emailMarketingConsent,
+      postConsent: flags.postDirectMarketing,
+      phoneConsent: flags.telephoneDirectMarketing,
+      emailConsentWellbeingWalks: teamStatus === "Wellbeing Walker" && flags.emailMarketingConsent,
 
       emailMarketingConsent: flags.emailMarketingConsent,
       ...(flags.emailMarketingConsent

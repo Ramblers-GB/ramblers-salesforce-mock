@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@ramblers/sf-contract':
-        specifier: github:nbarrett/ramblers-salesforce-contract#v0.5.0
-        version: https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/03eb6150e46d61a136b2f049e9adb512a3dd2ebd
+        specifier: github:nbarrett/ramblers-salesforce-contract#v1.0.0
+        version: https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/313ee08a26afbcfc154c0665c869512aa10d5b5c
       bcryptjs:
         specifier: 2.4.3
         version: 2.4.3
@@ -661,9 +661,9 @@ packages:
   '@pinojs/redact@0.4.0':
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
 
-  '@ramblers/sf-contract@https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/03eb6150e46d61a136b2f049e9adb512a3dd2ebd':
-    resolution: {tarball: https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/03eb6150e46d61a136b2f049e9adb512a3dd2ebd}
-    version: 0.5.0
+  '@ramblers/sf-contract@https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/313ee08a26afbcfc154c0665c869512aa10d5b5c':
+    resolution: {tarball: https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/313ee08a26afbcfc154c0665c869512aa10d5b5c}
+    version: 1.0.0
     engines: {node: '>=20.0.0'}
 
   '@rolldown/binding-android-arm64@1.0.0-rc.17':
@@ -2408,6 +2408,7 @@ packages:
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   vary@1.1.2:
@@ -2909,7 +2910,7 @@ snapshots:
 
   '@pinojs/redact@0.4.0': {}
 
-  '@ramblers/sf-contract@https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/03eb6150e46d61a136b2f049e9adb512a3dd2ebd':
+  '@ramblers/sf-contract@https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/313ee08a26afbcfc154c0665c869512aa10d5b5c':
     dependencies:
       zod: 3.25.76
 

@@ -1,6 +1,6 @@
 import { Schema, model } from "mongoose";
 import type { HydratedDocument, Model } from "mongoose";
-import type { RemovalReason } from "@ramblers/sf-contract";
+import type { RemovalReason } from "./member.model.js";
 
 export const SCENARIO_CHANGE_TYPES = ["removed", "amended", "added"] as const;
 export type ScenarioChangeType = (typeof SCENARIO_CHANGE_TYPES)[number];

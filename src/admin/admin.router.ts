@@ -107,7 +107,7 @@ async function loadBuildInfo(): Promise<BuildInfo> {
   };
   return cachedBuildInfo;
 }
-import { Operator, Tenant, ApiToken, Member } from "../db/models/index.js";
+import { Operator, Tenant, ApiToken, Member, WritebackEvent } from "../db/models/index.js";
 import type { OperatorDoc, TenantDoc } from "../db/models/index.js";
 import { asyncHandler } from "../api/async-handler.js";
 import { attachOperator, requireOperator, requireRoot } from "./session.js";
@@ -682,6 +682,21 @@ export function createAdminRouter(vite?: ViteDevServer): Router {
         totalSample: docs.length,
         members: docs.map((d) => toSalesforceMember(d)),
       });
+    }),
+  );
+
+  router.get(
+    "/admin/api/tenants/:code/writebacks",
+    requireOperator(),
+    asyncHandler(async (req: Request, res: Response) => {
+      const tenant = await assertOwnsTenant(req.params["code"]!, req.operator!);
+      const limit = Math.min(100, Math.max(1, Number(req.query["limit"] ?? 50)));
+      const writebacks = await WritebackEvent.find({ tenantCode: tenant.code })
+        .sort({ requestedAt: -1 })
+        .limit(limit)
+        .lean()
+        .exec();
+      res.json({ tenantCode: tenant.code, writebacks });
     }),
   );
 

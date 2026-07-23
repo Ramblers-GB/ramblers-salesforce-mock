@@ -1,7 +1,7 @@
-import type { RemovalReason } from "@ramblers/sf-contract";
 import { Member, Scenario, Tenant } from "../db/models/index.js";
 import type {
   MemberDoc,
+  RemovalReason,
   ScenarioChangeType,
   TenantDoc,
 } from "../db/models/index.js";

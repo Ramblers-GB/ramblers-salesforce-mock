@@ -1,8 +1,8 @@
 {
   "name": "ramblers-salesforce-mock",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "Standalone reference mock server for the Ramblers Salesforce API (nbarrett/ngx-ramblers#209). Shared dev fixture for NGX, MailMan and HQ.",
+  "description": "Live development and test implementation of Ramblers Team Emails 1.0.0 with isolated supporter fixtures and writeback auditing.",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -30,7 +30,7 @@
     "setup:hooks": "bash tools/setup-git-hooks.sh"
   },
   "dependencies": {
-    "@ramblers/sf-contract": "github:nbarrett/ramblers-salesforce-contract#v0.5.0",
+    "@ramblers/sf-contract": "github:nbarrett/ramblers-salesforce-contract#v1.0.0",
     "bcryptjs": "2.4.3",
     "cookie-parser": "1.4.7",
     "csrf-sync": "4.2.1",

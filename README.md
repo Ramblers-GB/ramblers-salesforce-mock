@@ -1,92 +1,60 @@
 # ramblers-salesforce-mock
 
-Reference mock server for the Ramblers Salesforce API specified in [`nbarrett/ngx-ramblers#209`](https://github.com/nbarrett/ngx-ramblers/issues/209). Live at [`salesforce-mock.ngx-ramblers.org.uk`](https://salesforce-mock.ngx-ramblers.org.uk).
+Live development and test implementation of [Ramblers Team Emails 1.0.0](https://app.swaggerhub.com/apis/JAMESKEARS/ramblers-group-email/1.0.0). The deployed service is available at [salesforce-mock.ngx-ramblers.org.uk](https://salesforce-mock.ngx-ramblers.org.uk).
 
-## One repo of three
+The mock gives API consumers realistic, isolated and repeatable supporter data before the Head Office implementation is available. It implements the same contract consumed by NGX and can also support other clients testing against the published interface.
 
-This repo is one of three that make up the Salesforce Member API family. Architecture story: [_From Mock to Production_](https://www.ngx-ramblers.org.uk/how-to/technical-articles/2026-04-27-salesforce-mock-to-production).
+## Published operations
 
-| Repo | What it is | Live at |
-|---|---|---|
-| [`ramblers-salesforce-contract`](https://github.com/nbarrett/ramblers-salesforce-contract) | The shared wire-format package — TypeScript types, Zod request schemas, OpenAPI builder, error envelope, Insight Hub columns, and the `MemberProvider` port interface. Versioned (currently `v0.2.0`). | npm-style git tag dependency |
-| **`ramblers-salesforce-mock`** (this repo) | The development server — Mongo-backed, with the admin SPA, xlsx ingest and synthetic-data generator. | [salesforce-mock.ngx-ramblers.org.uk](https://salesforce-mock.ngx-ramblers.org.uk) |
-| [`ramblers-salesforce-server`](https://github.com/nbarrett/ramblers-salesforce-server) | The production server skeleton — same wire format, same routes, same OpenAPI document, with a Salesforce-backed adapter waiting on Phase 4 of the migration. | [salesforce-server.ngx-ramblers.org.uk](https://salesforce-server.ngx-ramblers.org.uk) |
+| Operation | Purpose |
+|---|---|
+| `GET /get_supporters` | Retrieve the current supporters associated with a team. |
+| `POST /unsubscribe` | Record an unsubscribe request for a supporter. |
+| `POST /bounced_email` | Record a hard or soft email bounce. |
 
-The mock and the production server are interchangeable from a consumer's perspective — both serve the byte-identical wire shape because both depend on the same contract package. Consumers (NGX-Ramblers, MailMan) point at whichever URL fits their environment.
+Each operation accepts the published `api_key` and `team_code` query parameters. API keys are restricted to one team, and mismatched combinations are rejected.
 
-## What this server provides
+The superseded Ticket #209 routes are not retained. Consumers therefore fail clearly if they have not migrated to Ramblers Team Emails 1.0.0.
 
-- **Day-one endpoints** from [#209](https://github.com/nbarrett/ngx-ramblers/issues/209): `GET /api/groups/{groupCode}/members` and `POST /api/members/{membershipNumber}/consent`. Phase 2 endpoints ([#211](https://github.com/nbarrett/ngx-ramblers/issues/211) — training detail, area aggregates, accreditation) are a future extension.
-- **Multi-tenant scoping**: each API token is scoped to a single `groupCode` or `areaCode`; each operator account (NGX, MailMan, etc.) owns its own tenants and sees only its own data.
-- **Data loading**: upload Insight Hub `ExportAll.xlsx` through the admin UI, or generate synthetic rows for load/shape testing.
-- **Lifecycle scenarios** ([#8](https://github.com/nbarrett/ramblers-salesforce-mock/issues/8)): shape the next `?since=…` delta by asking the mock for "remove N, amend M (firstName + email), add K" — same wire format, no contract change. See [Lifecycle scenarios](#lifecycle-scenarios) below.
-- **Wire-format docs**: OpenAPI at `/api/openapi.json`, Swagger UI at `/docs`. Both built from the contract package's `buildOpenApiDocument()` so they stay aligned with whatever the production server ships.
-- **Admin SPA**: tenant + token + member management at `/admin`. Mock-only — production is API-only.
+## Contract
 
-## Stack
+The mock pins [`@ramblers/sf-contract` v1.0.0](https://github.com/nbarrett/ramblers-salesforce-contract/releases/tag/v1.0.0). That package mirrors the published SwaggerHub definition and supplies the TypeScript types, validation schemas, error mappings and OpenAPI document used here.
 
-- Node 20+ and strict TypeScript (no `.js` / `.mjs` / `.cjs` source files anywhere).
-- Express + Mongoose (MongoDB Atlas).
-- `@ramblers/sf-contract` pinned at a git tag for the wire format.
-- pnpm for package management. esbuild for the server bundle. Vite for the admin-UI client bundle and dev HMR.
-- Deployed to Fly.io (`lhr`).
+- Swagger UI: [salesforce-mock.ngx-ramblers.org.uk/docs](https://salesforce-mock.ngx-ramblers.org.uk/docs)
+- OpenAPI JSON: [salesforce-mock.ngx-ramblers.org.uk/api/openapi.json](https://salesforce-mock.ngx-ramblers.org.uk/api/openapi.json)
+- Operator console: [salesforce-mock.ngx-ramblers.org.uk/admin](https://salesforce-mock.ngx-ramblers.org.uk/admin)
+
+## Supporter fixtures
+
+The synthetic generator creates all four published team relationships:
+
+- members;
+- affiliated members;
+- volunteers; and
+- Wellbeing Walkers.
+
+It produces stable `contactId` and `memberRef` values, optional membership numbers, the published membership statuses, volunteer roles, email preferences and team-scoped permissions. Insight Hub spreadsheet import remains available as a transitional way to seed member-shaped records.
+
+Unsubscribe and bounce calls are written to a separate audit collection. Unsubscribe calls are recorded without changing a consent field because the published specification does not yet define the scope of that change.
 
 ## Local development
 
 ```sh
-corepack enable                # one-off — activates the pnpm version pinned in package.json
+corepack enable
 pnpm install
-cp .env.example .env           # fill in ATLAS_URI and admin creds
+cp .env.example .env
 pnpm dev
 ```
 
-`pnpm dev` runs the server with Vite middleware mounted, so the admin SPA gets true HMR on every save.
+## Verification
+
+```sh
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+```
 
 ## Deployment
 
-See `fly.toml`. Secrets live in the NGX staging `config.environments` document (the only place they live) and are mirrored to Fly via `fly secrets set` at deploy time.
-
-## Lifecycle scenarios
-
-The mock exposes a "Scenarios" tab on each tenant (and a matching admin endpoint) for exercising the add / amend / remove paths of [#209](https://github.com/nbarrett/ngx-ramblers/issues/209) without hand-editing Mongo. The wire format does not change - only the underlying state - so any conforming client gets the new shape from a plain `GET /api/groups/{code}/members?since=…` call.
-
-### Flow
-
-1. Initial sync: client pulls members with no `since` and records the request timestamp.
-2. Operator opens the tenant's **Scenarios** tab in `/admin`, enters the recorded timestamp as `since`, picks counts for `removed` / `added` / `amended`, and ticks the fields to mutate on amended members.
-3. The mock soft-removes, amends and inserts members so that every change carries `updatedAt > since` (and added members carry `ingestedAt > since`).
-4. The client pulls again with `?since=<recorded-timestamp>` and gets back exactly the shape the operator asked for, broken down as `added` / `updated` / `removed` in the response's `changes` array.
-
-The admin response includes a `nextSince` timestamp the operator can hand to the client as the baseline for the next cycle, plus a per-membership-number summary of what was changed (and which fields). Re-applying with the same `seed` picks the same members and produces the same field values.
-
-### Curl example
-
-```sh
-# Apply a scenario: remove 2, add 5, amend 3 members (firstName + email)
-curl -s -X POST \
-  -H "Cookie: <admin session cookie>" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "since": "2026-01-01T00:00:00Z",
-        "removed": 2,
-        "added": 5,
-        "amended": 3,
-        "amendFields": ["firstName", "email"],
-        "removalReason": "transferred",
-        "seed": 42
-      }' \
-  https://salesforce-mock.ngx-ramblers.org.uk/admin/api/tenants/KT50/scenarios/delta
-
-# Then any #209 consumer reads the delta with the regular public endpoint:
-curl -s \
-  -H "Authorization: Bearer <token>" \
-  "https://salesforce-mock.ngx-ramblers.org.uk/api/groups/KT50/members?since=2026-01-01T00:00:00Z"
-```
-
-The allow-list of amend fields is: `firstName`, `lastName`, `email`, `postcode`, `mobileNumber`, `landlineTelephone`, `membershipExpiryDate`, `emailMarketingConsent`, `groupMarketingConsent`. `amendFields` is required (and must contain at least one entry) whenever `amended > 0`.
-
-## Reading
-
-- [_From Mock to Production_](https://www.ngx-ramblers.org.uk/how-to/technical-articles/2026-04-27-salesforce-mock-to-production) — architecture, port-and-adapter pattern, and how the three repos fit together.
-- [_The Ramblers Salesforce Mock Server_](https://www.ngx-ramblers.org.uk/how-to/technical-articles/2026-04-21-ramblers-salesforce-mock-server) — the original write-up of this repo.
-- [_Using the Mock_](https://www.ngx-ramblers.org.uk/how-to/technical-articles/2026-04-21-using-ramblers-salesforce-mock) — operator-level walkthroughs (sign-in, tenants, tokens, calling the API, loading data).
+The service is deployed to Fly.io using `fly.toml`. Infrastructure credentials remain in the NGX staging environment configuration and are resolved only when required for deployment or diagnostics.

@@ -1,8 +1,7 @@
-import type { NextFunction, Request, Response } from "express";
+import type { Request } from "express";
 import { ApiToken } from "../db/models/index.js";
 import type { TokenDoc } from "../db/models/index.js";
-import { apiError } from "../api/errors.js";
-import { extractBearerToken, hashToken } from "./tokens.js";
+import { hashToken } from "./tokens.js";
 
 declare global {
   namespace Express {
@@ -12,66 +11,25 @@ declare global {
   }
 }
 
-/**
- * Bearer-auth middleware for the public API.
- *
- * Populates `req.apiToken` on success. Denies unauthenticated, unknown, or
- * revoked tokens with the #209-spec `UNAUTHORIZED` error envelope.
- */
-export async function bearerAuth(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
-  const plaintext = extractBearerToken(req.header("authorization"));
-  if (!plaintext) {
-    apiError(res, "UNAUTHORIZED", "Missing or malformed Authorization header");
-    return;
+export type TeamAuthenticationResult =
+  | { kind: "ok"; token: TokenDoc; teamCode: string }
+  | { kind: "missing" }
+  | { kind: "unauthorised" };
+
+export async function authenticateTeam(req: Request): Promise<TeamAuthenticationResult> {
+  const apiKey = typeof req.query["api_key"] === "string" ? req.query["api_key"] : undefined;
+  const teamCode = typeof req.query["team_code"] === "string" ? req.query["team_code"] : undefined;
+  if (!apiKey || !teamCode) {
+    return { kind: "missing" };
   }
 
-  const record = await ApiToken.findOne({ tokenHash: hashToken(plaintext) }).exec();
-  if (!record) {
-    apiError(res, "UNAUTHORIZED", "Unknown API token");
-    return;
-  }
-  if (record.revokedAt) {
-    apiError(res, "UNAUTHORIZED", "API token has been revoked");
-    return;
+  const token = await ApiToken.findOne({ tokenHash: hashToken(apiKey) }).exec();
+  const authorised = token && !token.revokedAt && token.tenantCode.toUpperCase() === teamCode.toUpperCase();
+  if (!authorised) {
+    return { kind: "unauthorised" };
   }
 
-  // Update lastUsedAt asynchronously; don't block the request.
-  ApiToken.updateOne({ _id: record._id }, { $set: { lastUsedAt: new Date() } })
-    .exec()
-    .catch(() => {
-      /* best-effort */
-    });
-
-  req.apiToken = record;
-  next();
-}
-
-/**
- * Enforces that the path's tenant code matches the token's tenant scope.
- * Called from routers after bearerAuth has populated `req.apiToken`.
- */
-export function requireTenantMatch(
-  pathTenant: string,
-  req: Request,
-  res: Response,
-): boolean {
-  const token = req.apiToken;
-  if (!token) {
-    apiError(res, "INTERNAL_ERROR", "bearerAuth must run before requireTenantMatch");
-    return false;
-  }
-  if (token.tenantCode.toUpperCase() !== pathTenant.toUpperCase()) {
-    apiError(
-      res,
-      "UNAUTHORIZED",
-      `Token is not authorised for tenant ${pathTenant}`,
-      { tokenTenant: token.tenantCode, requestedTenant: pathTenant },
-    );
-    return false;
-  }
-  return true;
+  await ApiToken.updateOne({ _id: token._id }, { $set: { lastUsedAt: new Date() } }).exec();
+  req.apiToken = token;
+  return { kind: "ok", token, teamCode: teamCode.toUpperCase() };
 }

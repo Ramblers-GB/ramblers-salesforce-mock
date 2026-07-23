@@ -8,7 +8,7 @@ export { ApiToken } from "./token.model.js";
 export type { TokenAttrs, TokenDoc, TokenModel } from "./token.model.js";
 
 export { Member } from "./member.model.js";
-export type { MemberAttrs, MemberDoc, MemberModel } from "./member.model.js";
+export type { MemberAttrs, MemberDoc, MemberModel, RemovalReason } from "./member.model.js";
 
 export { ConsentEvent } from "./consent-event.model.js";
 export type {
@@ -16,6 +16,13 @@ export type {
   ConsentEventDoc,
   ConsentEventModel,
 } from "./consent-event.model.js";
+export { WritebackEvent } from "./writeback-event.model.js";
+export type {
+  WritebackEventAttrs,
+  WritebackEventDoc,
+  WritebackEventModel,
+  WritebackKind,
+} from "./writeback-event.model.js";
 
 export {
   Scenario,

@@ -1,163 +1,71 @@
-import { ConsentEvent, Member, Tenant } from "../db/models/index.js";
-import type { MemberDoc } from "../db/models/index.js";
-import { toSalesforceMember } from "../api/member-mapper.js";
 import type {
-  ConsentUpdateResponse,
-  MemberChange,
-  MemberListResponse,
+  BounceOptions,
+  SupporterProvider,
+  SupportersOptions,
+  SupportersResult,
+  SupporterUpdateResult,
+  UnsubscribeOptions,
 } from "@ramblers/sf-contract";
-import type {
-  ApplyConsentOptions,
-  ApplyConsentResult,
-  ListMembersOptions,
-  ListMembersResult,
-  MemberProvider,
-} from "@ramblers/sf-contract";
+import { Member, Tenant, WritebackEvent } from "../db/models/index.js";
+import { toSupporter } from "../api/member-mapper.js";
 
-export class MockMemberProvider implements MemberProvider {
-  async listMembers({
-    groupCode,
-    since,
-    includeExpired,
-  }: ListMembersOptions): Promise<ListMembersResult> {
-    const tenantCode = groupCode.toUpperCase();
+function supporterFilter(teamCode: string, memberRef: string, emailAddress: string): Record<string, unknown> {
+  return {
+    tenantCode: teamCode,
+    removed: { $ne: true },
+    email: { $regex: `^${emailAddress.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+    $or: [
+      { memberRef },
+      { salesforceId: memberRef },
+      { membershipNumber: memberRef },
+    ],
+  };
+}
+
+export class MockMemberProvider implements SupporterProvider {
+  async supporters({ teamCode }: SupportersOptions): Promise<SupportersResult> {
+    const tenantCode = teamCode.toUpperCase();
     const tenant = await Tenant.findOne({ code: tenantCode }).exec();
     if (!tenant) {
-      return { kind: "groupNotFound" };
+      return { kind: "teamNotFound" };
     }
 
-    const memberFilter: Record<string, unknown> = { tenantCode };
-    if (!includeExpired) {
-      memberFilter["$or"] = [
-        { membershipExpiryDate: { $exists: false } },
-        { membershipExpiryDate: { $gte: new Date() } },
-      ];
-    }
-    if (!since) {
-      memberFilter["removed"] = { $ne: true };
-    }
-
-    const docs = await Member.find(memberFilter).exec();
-    const members = docs
-      .filter((d: MemberDoc) => !d.removed)
-      .map((d) => toSalesforceMember(d));
-
-    const response: MemberListResponse = {
-      groupCode: tenantCode,
-      groupName: tenant.name ?? tenant.code,
-      totalCount: members.length,
-      members,
-    };
-
-    if (since) {
-      const changed = docs.filter((d) => d.updatedAt >= since);
-      const changes: MemberChange[] = changed.map((d) => {
-        if (d.removed) {
-          const change: MemberChange = {
-            member: toSalesforceMember(d),
-            changeType: "removed",
-            changedAt: d.updatedAt.toISOString(),
-          };
-          if (d.removalReason) change.removalReason = d.removalReason;
-          return change;
-        }
-        const isNew = d.ingestedAt >= since;
-        return {
-          member: toSalesforceMember(d),
-          changeType: isNew ? "added" : "updated",
-          changedAt: d.updatedAt.toISOString(),
-        };
-      });
-      response.since = since.toISOString();
-      response.changes = changes;
-    }
-
-    return { kind: "ok", response };
+    const docs = await Member.find({ tenantCode, removed: { $ne: true } }).exec();
+    return { kind: "ok", supporters: docs.map((doc) => toSupporter(doc)) };
   }
 
-  async applyConsent({
-    tenantCode,
-    membershipNumber,
-    request,
-    appliedAt,
-  }: ApplyConsentOptions): Promise<ApplyConsentResult> {
-    const member = await Member.findOne({
+  async unsubscribe({ teamCode, request, appliedAt }: UnsubscribeOptions): Promise<SupporterUpdateResult> {
+    const tenantCode = teamCode.toUpperCase();
+    const supporter = await Member.findOne(
+      supporterFilter(tenantCode, request.memberRef, request.emailAddress),
+    ).exec();
+    await WritebackEvent.create({
       tenantCode,
-      membershipNumber,
-    }).exec();
-    if (!member) {
-      return { kind: "memberNotFound" };
-    }
+      kind: "unsubscribe",
+      emailAddress: request.emailAddress,
+      memberRef: request.memberRef,
+      requestedAt: appliedAt,
+      supporterMatched: Boolean(supporter),
+      resultingState: supporter ? "recorded-no-scope-assumed" : "supporter-not-found",
+    });
+    return supporter ? { kind: "ok" } : { kind: "supporterNotFound" };
+  }
 
-    const updates: Partial<
-      Pick<
-        typeof member,
-        | "emailMarketingConsent"
-        | "groupMarketingConsent"
-        | "areaMarketingConsent"
-        | "otherMarketingConsent"
-        | "emailPermissionLastUpdated"
-        | "updatedAt"
-      >
-    > = { updatedAt: appliedAt };
-
-    if (request.emailMarketingConsent !== undefined) {
-      updates.emailMarketingConsent = request.emailMarketingConsent;
-      updates.emailPermissionLastUpdated = appliedAt;
-    }
-    if (request.groupMarketingConsent !== undefined) {
-      updates.groupMarketingConsent = request.groupMarketingConsent;
-    }
-    if (request.areaMarketingConsent !== undefined) {
-      updates.areaMarketingConsent = request.areaMarketingConsent;
-    }
-    if (request.otherMarketingConsent !== undefined) {
-      updates.otherMarketingConsent = request.otherMarketingConsent;
-    }
-
-    Object.assign(member, updates);
-    await member.save();
-
-    const eventDoc = {
+  async bounce({ teamCode, request, appliedAt }: BounceOptions): Promise<SupporterUpdateResult> {
+    const tenantCode = teamCode.toUpperCase();
+    const supporter = await Member.findOne(
+      supporterFilter(tenantCode, request.memberRef, request.emailAddress),
+    ).exec();
+    await WritebackEvent.create({
       tenantCode,
-      membershipNumber,
-      source: request.source,
-      submittedAt: new Date(request.timestamp),
-      appliedAt,
-      ...(request.reason !== undefined ? { reason: request.reason } : {}),
-      ...(request.emailMarketingConsent !== undefined
-        ? { emailMarketingConsent: request.emailMarketingConsent }
-        : {}),
-      ...(request.groupMarketingConsent !== undefined
-        ? { groupMarketingConsent: request.groupMarketingConsent }
-        : {}),
-      ...(request.areaMarketingConsent !== undefined
-        ? { areaMarketingConsent: request.areaMarketingConsent }
-        : {}),
-      ...(request.otherMarketingConsent !== undefined
-        ? { otherMarketingConsent: request.otherMarketingConsent }
-        : {}),
-    };
-    await ConsentEvent.create(eventDoc);
-
-    const response: ConsentUpdateResponse = {
-      membershipNumber,
-      updatedAt: appliedAt.toISOString(),
-      success: true,
-    };
-    if (member.emailMarketingConsent !== undefined) {
-      response.emailMarketingConsent = member.emailMarketingConsent;
-    }
-    if (member.groupMarketingConsent !== undefined) {
-      response.groupMarketingConsent = member.groupMarketingConsent;
-    }
-    if (member.areaMarketingConsent !== undefined) {
-      response.areaMarketingConsent = member.areaMarketingConsent;
-    }
-    if (member.otherMarketingConsent !== undefined) {
-      response.otherMarketingConsent = member.otherMarketingConsent;
-    }
-
-    return { kind: "ok", response };
+      kind: "bounce",
+      emailAddress: request.emailAddress,
+      memberRef: request.memberRef,
+      bounceType: request.bounceType,
+      requestedAt: appliedAt,
+      supporterMatched: Boolean(supporter),
+      resultingState: supporter ? "bounce-recorded" : "supporter-not-found",
+    });
+    return supporter ? { kind: "ok" } : { kind: "supporterNotFound" };
   }
 }

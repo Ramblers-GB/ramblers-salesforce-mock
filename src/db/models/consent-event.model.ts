@@ -1,6 +1,7 @@
 import { Schema, model } from "mongoose";
 import type { HydratedDocument, Model } from "mongoose";
-import type { ConsentSource } from "@ramblers/sf-contract";
+
+export type ConsentSource = "ngx-ramblers" | "mailman";
 
 export interface ConsentEventAttrs {
   tenantCode: string;
