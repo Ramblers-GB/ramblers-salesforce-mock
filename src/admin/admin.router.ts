@@ -7,16 +7,12 @@ import { readFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ViteDevServer } from "vite";
+import {
+  releaseEntryForDisplay,
+  type ReleaseEntry,
+} from "./release-notes.model.js";
 
 const execFileAsync = promisify(execFile);
-
-interface ReleaseEntry {
-  sha: string;
-  author: string;
-  date: string;
-  subject: string;
-  body: string;
-}
 
 interface BuildInfo {
   version: string;
@@ -797,7 +793,7 @@ export function createAdminRouter(vite?: ViteDevServer): Router {
     "/admin/api/release-notes",
     asyncHandler(async (_req: Request, res: Response) => {
       const info = await loadBuildInfo();
-      res.json({ entries: info.entries });
+      res.json({ entries: info.entries.map(releaseEntryForDisplay) });
     }),
   );
 

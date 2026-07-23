@@ -1562,6 +1562,13 @@ function renderInlineCode(escapedText: string): string {
   return escapedText.replace(/`([^`]+)`/g, "<code>$1</code>");
 }
 
+function linkifyUrls(escapedText: string): string {
+  return escapedText.replace(
+    /(https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/issues\/\d+)/g,
+    '<a href="$1" target="_blank" rel="noopener">$1</a>',
+  );
+}
+
 const REPO_URL = "https://github.com/nbarrett/ramblers-salesforce-mock";
 const ISSUE_REPO_URL = `${REPO_URL}/issues`;
 
@@ -1572,15 +1579,10 @@ function linkifyIssueRefs(escapedText: string): string {
   );
 }
 
-/**
- * Render a git commit body as paragraphs + bulleted lists with inline code.
- *
- * - Splits on blank lines into blocks.
- * - A block containing any line that starts with `- ` becomes a <ul>; lines
- *   without a leading dash are treated as continuation of the previous item
- *   (so 72-char-wrapped commit bullets render as a single list item).
- * - Other blocks join soft line breaks into spaces and render as <p>.
- */
+function renderReleaseText(value: string): string {
+  return linkifyIssueRefs(linkifyUrls(renderInlineCode(escapeHtml(value))));
+}
+
 function renderCommitBody(body: string): string {
   if (!body.trim()) return "";
   const blocks = body.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
@@ -1601,12 +1603,12 @@ function renderCommitBody(body: string): string {
         }
         if (current !== null) items.push(current);
         const html = items
-          .map((i) => `<li>${linkifyIssueRefs(renderInlineCode(escapeHtml(i)))}</li>`)
+          .map((i) => `<li>${renderReleaseText(i)}</li>`)
           .join("");
         return `<ul>${html}</ul>`;
       }
       const collapsed = block.replace(/\n/g, " ");
-      return `<p>${linkifyIssueRefs(renderInlineCode(escapeHtml(collapsed)))}</p>`;
+      return `<p>${renderReleaseText(collapsed)}</p>`;
     })
     .join("");
 }
