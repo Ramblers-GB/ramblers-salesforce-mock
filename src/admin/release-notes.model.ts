@@ -7,7 +7,25 @@ export interface ReleaseEntry {
 }
 
 const RELEASE_NOTE_BODY_OVERRIDES: Record<string, string> = {
-  "15c47ad": "The mock now implements Ramblers Team Emails 1.0.0 with team-scoped credentials, complete supporter snapshots, and auditable unsubscribe and bounce writebacks. Consumers can retrieve members, affiliated members, volunteers, and Wellbeing Walkers through `GET /get_supporters`. The operator console shows writeback history. Routes from the superseded NGX API proposal at https://github.com/nbarrett/ngx-ramblers/issues/209 now return `404`. Synthetic fixtures cover the published supporter relationships, permissions, and nullable membership numbers.",
+  "15c47ad": [
+    "## What's new",
+    "",
+    "The live mock now implements the three Ramblers Team Emails operations and uses team-scoped API credentials. It returns current supporter snapshots, records unsubscribe requests without assuming their unresolved consent scope, and audits hard and soft bounces.",
+    "",
+    "## At a glance",
+    "",
+    "- Consumers can retrieve members, affiliated members, volunteers and Wellbeing Walkers through `GET /get_supporters`.",
+    "- The operator console shows unsubscribe and bounce writeback history.",
+    "- Superseded NGX Ticket 209 at https://github.com/nbarrett/ngx-ramblers/issues/209 routes now return `404`.",
+    "- Synthetic fixtures cover the published supporter relationships, permissions and nullable membership numbers.",
+    "",
+    "## Technical changes",
+    "",
+    "- Upgrade `@ramblers/sf-contract` to `v1.0.0`.",
+    "- Replace bearer and path authentication with published `api_key` and `team_code` query parameters.",
+    "- Add supporter mapping, writeback persistence and route-level conformance tests.",
+    "- Serve the Ramblers Team Emails 1.0.0 OpenAPI document and Swagger UI.",
+  ].join("\n"),
 };
 
 export function releaseEntryForDisplay(entry: ReleaseEntry): ReleaseEntry {

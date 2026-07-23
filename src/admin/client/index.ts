@@ -1589,8 +1589,11 @@ function renderCommitBody(body: string): string {
   return blocks
     .map((block) => {
       const lines = block.split("\n");
+      const heading = block.match(/^##\s+(.+)$/);
       const hasBullets = lines.some((l) => /^-\s/.test(l));
-      if (hasBullets) {
+      if (heading) {
+        return `<h3>${renderReleaseText(heading[1] ?? "")}</h3>`;
+      } else if (hasBullets) {
         const items: string[] = [];
         let current: string | null = null;
         for (const line of lines) {
