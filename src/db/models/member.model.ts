@@ -102,10 +102,6 @@ export interface MemberAttrs {
   telephonePermissionLastUpdated?: Date;
   walkProgrammeOptOut?: boolean;
 
-  groupMarketingConsent?: boolean;
-  areaMarketingConsent?: boolean;
-  otherMarketingConsent?: boolean;
-
   removed?: boolean;
   removalReason?: RemovalReason;
 
@@ -236,10 +232,6 @@ const memberSchema = new Schema<MemberAttrs>(
     telephoneDirectMarketing: Boolean,
     telephonePermissionLastUpdated: Date,
     walkProgrammeOptOut: Boolean,
-
-    groupMarketingConsent: Boolean,
-    areaMarketingConsent: Boolean,
-    otherMarketingConsent: Boolean,
 
     removed: { type: Boolean, default: false },
     removalReason: { type: String, enum: ["expired", "transferred", "deceased", "other"], required: false },

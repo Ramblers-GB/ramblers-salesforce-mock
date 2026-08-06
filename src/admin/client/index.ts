@@ -90,9 +90,6 @@ interface ReleaseEntry {
 
 const CONSENT_FLAGS = [
   "emailMarketingConsent",
-  "groupMarketingConsent",
-  "areaMarketingConsent",
-  "otherMarketingConsent",
   "postDirectMarketing",
   "telephoneDirectMarketing",
 ] as const;
@@ -1087,9 +1084,6 @@ class AdminApp {
     // Joint table seed: one default row (all false, weight 100).
     this.renderJointRow(genForm, {
       emailMarketingConsent: false,
-      groupMarketingConsent: false,
-      areaMarketingConsent: false,
-      otherMarketingConsent: false,
       postDirectMarketing: false,
       telephoneDirectMarketing: false,
       weight: 100,
@@ -1100,9 +1094,6 @@ class AdminApp {
       addRowBtn.onclick = (): void => {
         this.renderJointRow(genForm, {
           emailMarketingConsent: false,
-          groupMarketingConsent: false,
-          areaMarketingConsent: false,
-          otherMarketingConsent: false,
           postDirectMarketing: false,
           telephoneDirectMarketing: false,
           weight: 0,

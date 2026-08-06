@@ -7,9 +7,9 @@
  *
  * The output is shaped like `ParsedMember` (from xlsxParser) so it can be
  * fed straight into upsertMembers without an xlsx round-trip — that
- * matters because granular consent flags (groupMarketingConsent,
- * areaMarketingConsent, otherMarketingConsent) aren't in the 36 Insight
- * Hub columns and would be lost going through xlsx.
+ * matters because the Salesforce API fields (emailConsent, postConsent,
+ * phoneConsent, doNotEmail, volunteerRoles and the rest) aren't in the 36
+ * Insight Hub columns and would be lost going through xlsx.
  */
 import { randomInt } from "node:crypto";
 import type { TenantKind } from "../db/models/index.js";
@@ -145,9 +145,6 @@ const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 export const DEFAULT_CONSENT_DISTRIBUTION: ConsentDistribution = {
   mode: "independent",
   emailMarketingConsent: 0.7,
-  groupMarketingConsent: 0.6,
-  areaMarketingConsent: 0.5,
-  otherMarketingConsent: 0.3,
   postDirectMarketing: 0.4,
   telephoneDirectMarketing: 0.2,
 };
@@ -163,9 +160,6 @@ export const DEFAULT_EMAIL_DOMAIN = "ngx-ramblers.org.uk";
 
 export const CONSENT_FLAGS = [
   "emailMarketingConsent",
-  "groupMarketingConsent",
-  "areaMarketingConsent",
-  "otherMarketingConsent",
   "postDirectMarketing",
   "telephoneDirectMarketing",
 ] as const;
@@ -175,18 +169,12 @@ export type ConsentFlag = (typeof CONSENT_FLAGS)[number];
 export interface ConsentDistributionIndependent {
   mode: "independent";
   emailMarketingConsent: number;
-  groupMarketingConsent: number;
-  areaMarketingConsent: number;
-  otherMarketingConsent: number;
   postDirectMarketing: number;
   telephoneDirectMarketing: number;
 }
 
 export interface ConsentCombination {
   emailMarketingConsent: boolean;
-  groupMarketingConsent: boolean;
-  areaMarketingConsent: boolean;
-  otherMarketingConsent: boolean;
   postDirectMarketing: boolean;
   telephoneDirectMarketing: boolean;
   /** Probability weight (0..100). All combinations in a joint dist must sum to 100. */
@@ -285,9 +273,6 @@ function pickConsentCombination(
   if (dist.mode === "independent") {
     return {
       emailMarketingConsent: bernoulli(rng, dist.emailMarketingConsent),
-      groupMarketingConsent: bernoulli(rng, dist.groupMarketingConsent),
-      areaMarketingConsent: bernoulli(rng, dist.areaMarketingConsent),
-      otherMarketingConsent: bernoulli(rng, dist.otherMarketingConsent),
       postDirectMarketing: bernoulli(rng, dist.postDirectMarketing),
       telephoneDirectMarketing: bernoulli(rng, dist.telephoneDirectMarketing),
     };
@@ -300,9 +285,6 @@ function pickConsentCombination(
     if (target < acc) {
       return {
         emailMarketingConsent: combo.emailMarketingConsent,
-        groupMarketingConsent: combo.groupMarketingConsent,
-        areaMarketingConsent: combo.areaMarketingConsent,
-        otherMarketingConsent: combo.otherMarketingConsent,
         postDirectMarketing: combo.postDirectMarketing,
         telephoneDirectMarketing: combo.telephoneDirectMarketing,
       };
@@ -311,9 +293,6 @@ function pickConsentCombination(
   const last = dist.combinations[dist.combinations.length - 1]!;
   return {
     emailMarketingConsent: last.emailMarketingConsent,
-    groupMarketingConsent: last.groupMarketingConsent,
-    areaMarketingConsent: last.areaMarketingConsent,
-    otherMarketingConsent: last.otherMarketingConsent,
     postDirectMarketing: last.postDirectMarketing,
     telephoneDirectMarketing: last.telephoneDirectMarketing,
   };
@@ -391,8 +370,8 @@ function validateRoleProportions(roles: RoleProportions): void {
 /**
  * Generate `count` synthetic members for a tenant. Output is shaped like
  * `ParsedMember` so it can be passed directly to upsertMembers without
- * an xlsx round-trip (preserving granular consent + roles, neither of
- * which exist as Insight Hub columns).
+ * an xlsx round-trip (preserving the Salesforce consent flags + roles,
+ * neither of which exist as Insight Hub columns).
  */
 export function generateSyntheticMembers(
   opts: SyntheticOptions,
@@ -598,10 +577,6 @@ export function generateSyntheticMembers(
         ? { telephonePermissionLastUpdated: updatedFor(true) }
         : {}),
       walkProgrammeOptOut: bernoulli(rng, 0.1),
-
-      groupMarketingConsent: flags.groupMarketingConsent,
-      areaMarketingConsent: flags.areaMarketingConsent,
-      otherMarketingConsent: flags.otherMarketingConsent,
     } as ParsedMember;
 
     members.push(member);

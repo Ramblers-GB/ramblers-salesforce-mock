@@ -158,9 +158,6 @@ const probability = z.coerce.number().min(0).max(1);
 const consentIndependentSchema = z.object({
   mode: z.literal("independent"),
   emailMarketingConsent: probability,
-  groupMarketingConsent: probability,
-  areaMarketingConsent: probability,
-  otherMarketingConsent: probability,
   postDirectMarketing: probability,
   telephoneDirectMarketing: probability,
 });
@@ -169,9 +166,6 @@ const consentJointSchema = z.object({
   mode: z.literal("joint"),
   combinations: z.array(z.object({
     emailMarketingConsent: z.boolean(),
-    groupMarketingConsent: z.boolean(),
-    areaMarketingConsent: z.boolean(),
-    otherMarketingConsent: z.boolean(),
     postDirectMarketing: z.boolean(),
     telephoneDirectMarketing: z.boolean(),
     weight: z.coerce.number().min(0).max(100),
@@ -542,9 +536,10 @@ export function createAdminRouter(vite?: ViteDevServer): Router {
 
       if (parsed.data.downloadOnly) {
         // Round-trip through the xlsx writer so the download is exactly the
-        // 36-column Insight Hub format. Granular consent + roles do not
-        // appear here by design — those columns aren't part of the
-        // contract NGX's member-bulk-load.ts consumes.
+        // 36-column Insight Hub format. API-only fields such as the
+        // Salesforce consent flags and roles do not appear here by design —
+        // those columns aren't part of the contract NGX's
+        // member-bulk-load.ts consumes.
         const xlsx = await writeExportAll(rows as unknown as ReadonlyArray<Record<string, unknown>>);
         res.setHeader(
           "Content-Type",
@@ -558,8 +553,8 @@ export function createAdminRouter(vite?: ViteDevServer): Router {
         return;
       }
 
-      // Direct ingest — bypasses xlsx so granular consent + role flags
-      // survive into the DB, where they're served by the public API.
+      // Direct ingest — bypasses xlsx so the API-only consent and role
+      // flags survive into the DB, where they're served by the public API.
       const upsertResult = await upsertMembers(tenant.code, rows);
       res.json({
         tenantCode: tenant.code,

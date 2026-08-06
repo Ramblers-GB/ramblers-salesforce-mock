@@ -270,29 +270,6 @@
                 </tbody>
               </table>
 
-              <h4 class="rsm-channel-title">
-                <span class="rsm-channel-badge rsm-channel-api">API only</span>
-                Granular consent
-              </h4>
-              <p class="rsm-muted rsm-fieldset-help">
-                Stored on the member record in this server's database and returned by the
-                public API. <strong>Not</strong> part of the 36-column Insight Hub schema, so
-                these don't appear in the downloaded xlsx.
-              </p>
-              <table class="rsm-slider-table">
-                <thead><tr><th>Flag</th><th>True %</th><th></th></tr></thead>
-                <tbody>
-                  <tr><td>groupMarketingConsent</td>
-                      <td><input type="number" name="groupMarketingConsent" min="0" max="100" value="60" required /></td>
-                      <td><input type="range" data-rsm-slider="groupMarketingConsent" min="0" max="100" value="60" /></td></tr>
-                  <tr><td>areaMarketingConsent</td>
-                      <td><input type="number" name="areaMarketingConsent" min="0" max="100" value="50" required /></td>
-                      <td><input type="range" data-rsm-slider="areaMarketingConsent" min="0" max="100" value="50" /></td></tr>
-                  <tr><td>otherMarketingConsent</td>
-                      <td><input type="number" name="otherMarketingConsent" min="0" max="100" value="30" required /></td>
-                      <td><input type="range" data-rsm-slider="otherMarketingConsent" min="0" max="100" value="30" /></td></tr>
-                </tbody>
-              </table>
             </div>
 
             <div class="rsm-consent-joint" data-rsm-consent-joint hidden>
@@ -403,8 +380,9 @@
             Download the tenant's current dataset as a 36-column
             <code>InsightHub-&lt;CODE&gt;.xlsx</code> file — exact same shape as Insight Hub's
             <code>ExportAll.xlsx</code>, suitable for any consumer that already imports that format.
-            Granular consent flags and role assignments are preserved in this server's database
-            but are intentionally not part of the Insight Hub schema and so are not in the export.
+            The Salesforce consent flags and role assignments are preserved in this server's
+            database but are intentionally not part of the Insight Hub schema and so are not in
+            the export.
           </p>
           <button type="button" class="rsm-btn rsm-btn-primary" data-rsm-btn="export-insight-hub">
             Download Insight Hub xlsx

@@ -9,9 +9,6 @@ export interface ConsentEventAttrs {
   source: ConsentSource;
   reason?: string;
   emailMarketingConsent?: boolean;
-  groupMarketingConsent?: boolean;
-  areaMarketingConsent?: boolean;
-  otherMarketingConsent?: boolean;
   submittedAt: Date;
   appliedAt: Date;
 }
@@ -23,9 +20,6 @@ const consentEventSchema = new Schema<ConsentEventAttrs>(
     source: { type: String, enum: ["ngx-ramblers", "mailman"], required: true },
     reason: { type: String, required: false },
     emailMarketingConsent: Boolean,
-    groupMarketingConsent: Boolean,
-    areaMarketingConsent: Boolean,
-    otherMarketingConsent: Boolean,
     submittedAt: { type: Date, required: true },
     appliedAt: { type: Date, required: true, default: () => new Date() },
   },

@@ -18,7 +18,6 @@ export const SCENARIO_AMEND_FIELDS = [
   "landlineTelephone",
   "membershipExpiryDate",
   "emailMarketingConsent",
-  "groupMarketingConsent",
 ] as const;
 
 export type ScenarioAmendField = (typeof SCENARIO_AMEND_FIELDS)[number];
@@ -133,9 +132,6 @@ function applyAmendField(
     case "emailMarketingConsent":
       member.emailMarketingConsent = !member.emailMarketingConsent;
       member.emailPermissionLastUpdated = source.emailPermissionLastUpdated ?? new Date();
-      break;
-    case "groupMarketingConsent":
-      member.groupMarketingConsent = !member.groupMarketingConsent;
       break;
   }
 }
