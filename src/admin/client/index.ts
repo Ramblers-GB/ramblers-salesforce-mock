@@ -733,6 +733,18 @@ class AdminApp {
       };
     }
 
+    const supporterForm = $<HTMLFormElement>('[data-rsm-form="upload-supporters"]');
+    if (supporterForm) {
+      supporterForm.onsubmit = (e): void => {
+        e.preventDefault();
+        const fileInput = supporterForm.elements.namedItem("file") as HTMLInputElement;
+        const file = fileInput.files?.[0];
+        if (!file) return;
+        const replace = (supporterForm.elements.namedItem("replace") as HTMLInputElement).checked;
+        void this.uploadSupporterSheet(tenant, file, replace);
+      };
+    }
+
     const genForm = $<HTMLFormElement>('[data-rsm-form="generate"]');
     if (genForm) {
       this.bindGenerateForm(genForm, tenant);
@@ -1364,6 +1376,33 @@ class AdminApp {
         formData.append("file", file);
         const response = await fetch(
           `/admin/api/tenants/${encodeURIComponent(tenant.code)}/upload`,
+          { method: "POST", body: formData, credentials: "same-origin" },
+        );
+        if (!response.ok) {
+          const message = await extractErrorMessage(response);
+          this.setIngestError(message);
+          return;
+        }
+        const body = (await response.json()) as Record<string, unknown>;
+        this.setIngestResult(JSON.stringify(body, null, 2));
+        await this.refreshTenants();
+        await this.refreshMembers(tenant);
+      } catch (err: unknown) {
+        this.setIngestError(err instanceof Error ? err.message : String(err));
+      }
+    });
+  }
+
+  private async uploadSupporterSheet(tenant: TenantView, file: File, replace: boolean): Promise<void> {
+    this.clearIngestFeedback();
+    this.setIngestProgress("Uploading supporters…");
+    await this.withBusy(async () => {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("additive", replace ? "false" : "true");
+        const response = await fetch(
+          `/admin/api/tenants/${encodeURIComponent(tenant.code)}/members/upload`,
           { method: "POST", body: formData, credentials: "same-origin" },
         );
         if (!response.ok) {

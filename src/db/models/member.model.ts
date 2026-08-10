@@ -38,6 +38,7 @@ export interface MemberAttrs {
   membershipNumber?: string;
   firstName?: string;
   preferredName?: string;
+  displayName?: string;
   initials?: string;
   lastName: string;
   title?: string;
@@ -165,6 +166,7 @@ const memberSchema = new Schema<MemberAttrs>(
     membershipNumber: { type: String, required: false, index: true },
     firstName: String,
     preferredName: String,
+    displayName: String,
     initials: String,
     lastName: { type: String, required: true },
     title: String,

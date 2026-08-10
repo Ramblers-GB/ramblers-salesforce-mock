@@ -112,6 +112,8 @@ import { loadConfig } from "../config.js";
 import { logger } from "../logger.js";
 import { generateToken } from "../auth/tokens.js";
 import { parseExportAll, writeExportAll } from "../ingest/xlsx-parser.js";
+import type { ParsedMember } from "../ingest/xlsx-parser.js";
+import { parseSupporterSheetKeyedOnMemberRef } from "../ingest/supporter-sheet-parser.js";
 import { generateSyntheticMembers } from "../ingest/synthetic.js";
 import type {
   ConsentDistribution,
@@ -193,6 +195,35 @@ const generateSchema = z.object({
   consentDistribution: consentDistributionSchema.optional(),
   roleProportions: roleProportionsSchema.optional(),
   region: z.enum(REGION_KEYS).optional(),
+});
+
+const suppliedVolunteerRoleSchema = z.object({
+  roleName: z.string().trim().min(1).max(120),
+  startDate: z.string().trim().max(40).optional(),
+  displayName: z.string().trim().max(160).optional(),
+});
+
+const suppliedMemberSchema = z.object({
+  salesforceId: z.string().trim().min(1).max(80),
+  memberRef: z.string().trim().min(1).max(80),
+  contactId: z.string().trim().min(1).max(80).optional(),
+  membershipNumber: z.string().trim().max(40).optional(),
+  firstName: z.string().trim().max(120).optional(),
+  lastName: z.string().trim().max(120),
+  title: z.string().trim().max(40).optional(),
+  email: z.string().trim().max(200).optional(),
+  mobileNumber: z.string().trim().max(40).optional(),
+  landlineTelephone: z.string().trim().max(40).optional(),
+  postcode: z.string().trim().max(20).optional(),
+  groupCode: z.string().trim().max(20).optional(),
+  groupName: z.string().trim().max(120).optional(),
+  teamStatus: z.enum(["Member", "Affiliated", "Volunteer", "Wellbeing Walker"]).optional(),
+  volunteerRoles: z.array(suppliedVolunteerRoleSchema).optional(),
+});
+
+const suppliedMembersSchema = z.object({
+  additive: z.coerce.boolean().optional(),
+  members: z.array(suppliedMemberSchema).min(1).max(10_000),
 });
 
 const scenarioSchema = z.object({
@@ -468,6 +499,56 @@ export function createAdminRouter(vite?: ViteDevServer): Router {
         { $set: { revokedAt: new Date() } },
       );
       res.json({ revoked: result.modifiedCount === 1 });
+    }),
+  );
+
+  router.post(
+    "/admin/api/tenants/:code/members",
+    requireOperator(),
+    asyncHandler(async (req: Request, res: Response) => {
+      const tenant = await assertOwnsTenant(req.params["code"]!, req.operator!);
+      const parsed = suppliedMembersSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: parsed.error.issues[0]?.message ?? "Invalid supplied members" } });
+        return;
+      }
+      const rows = parsed.data.members.map((member) => ({
+        ...member,
+        contactId: member.contactId ?? member.salesforceId,
+        volunteer: member.teamStatus === "Volunteer",
+      })) as unknown as ReadonlyArray<ParsedMember>;
+      const upsertResult = await upsertMembers(tenant.code, rows, { additive: parsed.data.additive !== false });
+      res.json({
+        tenantCode: tenant.code,
+        supplied: rows.length,
+        ingest: upsertResult,
+      });
+    }),
+  );
+
+  router.post(
+    "/admin/api/tenants/:code/members/upload",
+    requireOperator(),
+    upload.single("file"),
+    asyncHandler(async (req: Request, res: Response) => {
+      const tenant = await assertOwnsTenant(req.params["code"]!, req.operator!);
+      if (!req.file) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: "No file uploaded (field name: 'file', must end .xlsx)" } });
+        return;
+      }
+      const parseResult = await parseSupporterSheetKeyedOnMemberRef(req.file.buffer);
+      const additive = String(req.body?.additive ?? "true") !== "false";
+      const upsertResult = await upsertMembers(tenant.code, parseResult.members, { additive });
+      res.json({
+        tenantCode: tenant.code,
+        parse: {
+          rowCount: parseResult.rowCount,
+          matchedMembers: parseResult.members.length,
+          unmatchedHeaders: parseResult.unmatchedHeaders,
+          warnings: parseResult.warnings,
+        },
+        ingest: upsertResult,
+      });
     }),
   );
 

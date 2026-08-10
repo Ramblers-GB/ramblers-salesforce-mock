@@ -131,6 +131,8 @@ a:hover { color: var(--rsm-mintcake-hover); }
 .rsm-form.rsm-inline { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-bottom: 14px; }
 .rsm-form.rsm-inline label { margin-bottom: 0; flex: 1 1 180px; }
 .rsm-form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.rsm-form label.rsm-check { display: flex; align-items: center; gap: 8px; font-weight: 400; flex: 2 1 280px; }
+.rsm-form label.rsm-check input { width: auto; }
 
 .rsm-btn {
   display: inline-block;

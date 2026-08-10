@@ -1,13 +1,3 @@
-/**
- * Tenant-scoped upsert. Writes parsed members into the `members`
- * collection under the given tenantCode, replacing the prior dataset.
- *
- * Per #248: "Idempotent: re-uploading the same spreadsheet replaces the
- * existing dataset for that scope." We implement that by soft-deleting
- * (removed=true, removalReason=other, updatedAt=now) any existing docs
- * for the tenant whose salesforceId isn't in the new batch, then
- * upserting the new rows.
- */
 import { Member, Tenant } from "../db/models/index.js";
 import type { ParsedMember } from "./xlsx-parser.js";
 import { logger } from "../logger.js";
@@ -17,6 +7,10 @@ export interface UpsertResult {
   updated: number;
   softRemoved: number;
   tenantCode: string;
+}
+
+export interface UpsertOptions {
+  additive?: boolean;
 }
 
 function pairConsentWithDate(m: ParsedMember, fallback: Date): ParsedMember {
@@ -31,9 +25,25 @@ function pairConsentWithDate(m: ParsedMember, fallback: Date): ParsedMember {
   };
 }
 
+async function softRemoveMembersOutsideBatch(
+  tenantCode: string,
+  retainedSalesforceIds: ReadonlySet<string>,
+  removedAt: Date,
+): Promise<{ modifiedCount: number }> {
+  return Member.updateMany(
+    {
+      tenantCode: tenantCode.toUpperCase(),
+      salesforceId: { $nin: Array.from(retainedSalesforceIds) },
+      removed: { $ne: true },
+    },
+    { $set: { removed: true, removalReason: "other", updatedAt: removedAt } },
+  );
+}
+
 export async function upsertMembers(
   tenantCode: string,
   parsed: ReadonlyArray<ParsedMember>,
+  options: UpsertOptions = {},
 ): Promise<UpsertResult> {
   const tenant = await Tenant.findOne({ code: tenantCode.toUpperCase() }).exec();
   if (!tenant) {
@@ -49,9 +59,6 @@ export async function upsertMembers(
   for (const raw of parsed) {
     const m = pairConsentWithDate(raw, now);
     const { salesforceId } = m;
-    // `ingestedAt` goes in $setOnInsert only so the first-seen timestamp is
-    // preserved across re-ingests. Every other field is in $set. Having any
-    // field in both operators is a MongoDB conflict and throws.
     const setDoc = {
       ...m,
       tenantCode: tenantCode.toUpperCase(),
@@ -67,15 +74,9 @@ export async function upsertMembers(
     else if (res.modifiedCount > 0) updated += 1;
   }
 
-  // Soft-remove members no longer present in the upload.
-  const softRemoved = await Member.updateMany(
-    {
-      tenantCode: tenantCode.toUpperCase(),
-      salesforceId: { $nin: Array.from(incomingIds) },
-      removed: { $ne: true },
-    },
-    { $set: { removed: true, removalReason: "other", updatedAt: now } },
-  );
+  const softRemoved = options.additive
+    ? { modifiedCount: 0 }
+    : await softRemoveMembersOutsideBatch(tenantCode, incomingIds, now);
 
   await Tenant.updateOne(
     { _id: tenant._id },
@@ -88,6 +89,7 @@ export async function upsertMembers(
       upserted,
       updated,
       softRemoved: softRemoved.modifiedCount,
+      additive: options.additive === true,
     },
     "ingest complete",
   );
