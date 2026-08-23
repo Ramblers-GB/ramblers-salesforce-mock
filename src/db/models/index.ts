@@ -23,16 +23,3 @@ export type {
   WritebackEventModel,
   WritebackKind,
 } from "./writeback-event.model.js";
-
-export {
-  Scenario,
-  SCENARIO_CHANGE_TYPES,
-  REMOVAL_REASONS,
-} from "./scenario.model.js";
-export type {
-  ScenarioAttrs,
-  ScenarioChangeSummary,
-  ScenarioChangeType,
-  ScenarioDoc,
-  ScenarioModel,
-} from "./scenario.model.js";
