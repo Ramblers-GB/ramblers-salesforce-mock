@@ -1,4 +1,4 @@
-app = "ramblers-salesforce-mock"
+app = "ramblers-salesforce-mock-ra"
 primary_region = "lhr"
 
 [build]
