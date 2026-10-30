@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@ramblers/sf-contract':
-        specifier: github:nbarrett/ramblers-salesforce-contract#v1.0.2
-        version: https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/c94e0cbbf0934af69427922b35c05ea51f5691b0
+        specifier: github:Ramblers-GB/ramblers-salesforce-contract#v1.0.2
+        version: https://codeload.github.com/Ramblers-GB/ramblers-salesforce-contract/tar.gz/c94e0cbbf0934af69427922b35c05ea51f5691b0
       bcryptjs:
         specifier: 2.4.3
         version: 2.4.3
@@ -661,8 +661,8 @@ packages:
   '@pinojs/redact@0.4.0':
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
 
-  '@ramblers/sf-contract@https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/c94e0cbbf0934af69427922b35c05ea51f5691b0':
-    resolution: {tarball: https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/c94e0cbbf0934af69427922b35c05ea51f5691b0}
+  '@ramblers/sf-contract@https://codeload.github.com/Ramblers-GB/ramblers-salesforce-contract/tar.gz/c94e0cbbf0934af69427922b35c05ea51f5691b0':
+    resolution: {tarball: https://codeload.github.com/Ramblers-GB/ramblers-salesforce-contract/tar.gz/c94e0cbbf0934af69427922b35c05ea51f5691b0}
     version: 1.0.2
     engines: {node: '>=20.0.0'}
 
@@ -2911,7 +2911,7 @@ snapshots:
 
   '@pinojs/redact@0.4.0': {}
 
-  '@ramblers/sf-contract@https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/c94e0cbbf0934af69427922b35c05ea51f5691b0':
+  '@ramblers/sf-contract@https://codeload.github.com/Ramblers-GB/ramblers-salesforce-contract/tar.gz/c94e0cbbf0934af69427922b35c05ea51f5691b0':
     dependencies:
       zod: 3.25.76
 
