@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@ramblers/sf-contract':
         specifier: github:nbarrett/ramblers-salesforce-contract#v1.0.2
-        version: https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/57909295a4157375271401256a8ab3b82ddedfd3
+        version: https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/c94e0cbbf0934af69427922b35c05ea51f5691b0
       bcryptjs:
         specifier: 2.4.3
         version: 2.4.3
@@ -661,8 +661,8 @@ packages:
   '@pinojs/redact@0.4.0':
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
 
-  '@ramblers/sf-contract@https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/57909295a4157375271401256a8ab3b82ddedfd3':
-    resolution: {tarball: https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/57909295a4157375271401256a8ab3b82ddedfd3}
+  '@ramblers/sf-contract@https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/c94e0cbbf0934af69427922b35c05ea51f5691b0':
+    resolution: {tarball: https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/c94e0cbbf0934af69427922b35c05ea51f5691b0}
     version: 1.0.2
     engines: {node: '>=20.0.0'}
 
@@ -1434,6 +1434,7 @@ packages:
   eslint@9.39.4:
     resolution: {integrity: sha512-XoMjdBOwe/esVgEvLmNsD3IRHkm7fbKIUGvrleloJXUZgDHig2IPWNniv+GwjyJXzuNqVjlr5+4yVUZjycJwfQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -2910,7 +2911,7 @@ snapshots:
 
   '@pinojs/redact@0.4.0': {}
 
-  '@ramblers/sf-contract@https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/57909295a4157375271401256a8ab3b82ddedfd3':
+  '@ramblers/sf-contract@https://codeload.github.com/nbarrett/ramblers-salesforce-contract/tar.gz/c94e0cbbf0934af69427922b35c05ea51f5691b0':
     dependencies:
       zod: 3.25.76
 
