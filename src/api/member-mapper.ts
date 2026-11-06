@@ -92,7 +92,7 @@ export function toSupporter(doc: MemberDoc): Supporter {
     canEmailMembers: doc.canEmailMembers ?? primaryRoles?.emailSender ?? false,
     canEmailWellbeingWalkers: doc.canEmailWellbeingWalkers ?? false,
     canViewMemberData: doc.canViewMemberData ?? primaryRoles?.viewMembershipData ?? false,
-    canViewMemberDate: doc.canViewMemberDate ?? primaryRoles?.viewMembershipData ?? false,
+    canViewVolunteerData: doc.canViewVolunteerData ?? primaryRoles?.viewMembershipData ?? false,
     emailConsent: doc.emailConsent ?? doc.emailMarketingConsent ?? false,
     emailConsentLastUpdated: dateOnly(doc.emailPermissionLastUpdated),
     postConsent: doc.postConsent ?? doc.postDirectMarketing ?? false,

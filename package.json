@@ -2,7 +2,7 @@
   "name": "ramblers-salesforce-mock",
   "version": "1.0.0",
   "private": true,
-  "description": "Live development and test implementation of Ramblers Team Emails 1.0.0 with isolated supporter fixtures and writeback auditing.",
+  "description": "Live development and test implementation of Ramblers Team Emails 1.0.2 with isolated supporter fixtures and writeback auditing.",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -30,7 +30,7 @@
     "setup:hooks": "bash tools/setup-git-hooks.sh"
   },
   "dependencies": {
-    "@ramblers/sf-contract": "github:Ramblers-GB/ramblers-salesforce-contract#v1.0.2",
+    "@ramblers/sf-contract": "github:Ramblers-GB/ramblers-salesforce-contract#v1.0.3",
     "bcryptjs": "2.4.3",
     "cookie-parser": "1.4.7",
     "csrf-sync": "4.2.1",

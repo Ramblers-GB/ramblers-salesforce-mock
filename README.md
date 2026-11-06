@@ -1,6 +1,6 @@
 # ramblers-salesforce-mock
 
-Live development and test implementation of [Ramblers Team Emails 1.0.0](https://app.swaggerhub.com/apis/JAMESKEARS/ramblers-group-email/1.0.0). The deployed service is available at [salesforce-mock.ngx-ramblers.org.uk](https://salesforce-mock.ngx-ramblers.org.uk).
+Live development and test implementation of [Ramblers Team Emails 1.0.2](https://app.swaggerhub.com/apis/JAMESKEARS/ramblers-group-email/1.0.2). The deployed service is available at [salesforce-mock.ngx-ramblers.org.uk](https://salesforce-mock.ngx-ramblers.org.uk).
 
 The mock gives API consumers realistic, isolated and repeatable supporter data before the Head Office implementation is available. It implements the same contract consumed by NGX and can also support other clients testing against the published interface.
 

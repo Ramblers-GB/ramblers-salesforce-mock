@@ -89,7 +89,7 @@ export interface MemberAttrs {
   canEmailMembers?: boolean;
   canEmailWellbeingWalkers?: boolean;
   canViewMemberData?: boolean;
-  canViewMemberDate?: boolean;
+  canViewVolunteerData?: boolean;
   emailConsent?: boolean;
   postConsent?: boolean;
   phoneConsent?: boolean;
@@ -221,7 +221,7 @@ const memberSchema = new Schema<MemberAttrs>(
     canEmailMembers: Boolean,
     canEmailWellbeingWalkers: Boolean,
     canViewMemberData: Boolean,
-    canViewMemberDate: Boolean,
+    canViewVolunteerData: Boolean,
     emailConsent: Boolean,
     postConsent: Boolean,
     phoneConsent: Boolean,

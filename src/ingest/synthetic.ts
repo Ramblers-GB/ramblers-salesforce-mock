@@ -558,7 +558,7 @@ export function generateSyntheticMembers(
       canEmailMembers: emailSender,
       canEmailWellbeingWalkers: emailSender,
       canViewMemberData: viewMembershipData,
-      canViewMemberDate: viewMembershipData,
+      canViewVolunteerData: viewMembershipData,
       emailConsent: flags.emailMarketingConsent,
       postConsent: flags.postDirectMarketing,
       phoneConsent: flags.telephoneDirectMarketing,

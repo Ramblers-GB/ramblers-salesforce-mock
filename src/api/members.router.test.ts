@@ -46,7 +46,7 @@ const supporter: Supporter = {
   canEmailMembers: true,
   canEmailWellbeingWalkers: false,
   canViewMemberData: true,
-  canViewMemberDate: true,
+  canViewVolunteerData: true,
   emailConsent: true,
   emailConsentLastUpdated: "2024-03-01",
   postConsent: true,

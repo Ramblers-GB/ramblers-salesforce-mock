@@ -8,9 +8,9 @@ describe("mock OpenAPI documentation", () => {
     const contact = info["contact"] as Record<string, unknown>;
 
     expect(info["title"]).toBe("Ramblers Team Emails");
-    expect(info["version"]).toBe("1.0.0");
+    expect(info["version"]).toBe("1.0.2");
     expect(info["description"]).toContain("Open the operator console");
-    expect(info["description"]).toContain("Ramblers Team Emails 1.0.0 on SwaggerHub");
+    expect(info["description"]).toContain("Ramblers Team Emails 1.0.2 on SwaggerHub");
     expect(contact["name"]).toBe("Ramblers Salesforce Mock");
     expect(contact["url"]).toBe("https://github.com/nbarrett/ramblers-salesforce-mock");
   });
